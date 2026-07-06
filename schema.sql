@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS `watchlist` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `tmdb_movie_id` INT NOT NULL,
+  `is_watched` TINYINT(1) DEFAULT 0,
+  `is_favorite` TINYINT(1) DEFAULT 0,
+  `added_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

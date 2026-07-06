@@ -1,0 +1,349 @@
+/* ===== MovieTem — Theme ===== */
+:root {
+    --bg-main: #000000;
+    --surface: #1F150C;
+    --surface-raised: #2A1D10;
+    --accent: #412D15;
+    --text-primary: #E1DCC9;
+    --text-muted: rgba(225, 220, 201, 0.6);
+    --text-faint: rgba(225, 220, 201, 0.4);
+    --border: rgba(225, 220, 201, 0.1);
+    --success: #6AAE7F;
+    --error: #C05A5A;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.01em;
+}
+
+.bg-surface {
+    background-color: var(--surface) !important;
+    border: 1px solid var(--border);
+}
+
+.navbar-custom {
+    background: rgba(0, 0, 0, 0.9) !important;
+    border-bottom: 1px solid var(--border);
+}
+
+.nav-link {
+    color: var(--text-primary) !important;
+    font-weight: 500;
+    opacity: 0.65;
+    transition: opacity 0.2s ease;
+}
+
+.nav-link:hover {
+    opacity: 1;
+}
+
+/* ---------- Hero ---------- */
+
+.hero-kicker {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+
+h1.display-4 {
+    font-family: 'Fraunces', serif;
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+}
+
+.text-custom-muted {
+    color: var(--text-muted) !important;
+    font-weight: 400;
+    font-size: 1.1rem;
+    line-height: 1.65;
+}
+
+.hero-rule {
+    width: 2px;
+    background-color: var(--accent);
+    align-self: stretch;
+}
+
+.btn-warning-custom {
+    background-color: var(--accent);
+    border: 1px solid var(--accent);
+    color: var(--text-primary) !important;
+    font-weight: 600;
+    padding: 12px 30px;
+    border-radius: 6px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-warning-custom:hover {
+    background-color: #533a1c;
+    border-color: #533a1c;
+}
+
+.btn-outline-accent {
+    color: var(--text-primary);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-weight: 500;
+    padding: 11px 28px;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-outline-accent:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* ---------- Section label — monospace "code comment" style,
+   echoes the "workstation environment" language from the hero copy ---------- */
+
+.section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    color: var(--text-faint);
+    margin-bottom: 0.5rem;
+}
+
+.section-title {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* ---------- Mood Cards ---------- */
+
+.mood-card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.25s cubic-bezier(0.165, 0.84, 0.44, 1),
+                border-color 0.25s ease,
+                background-color 0.25s ease,
+                box-shadow 0.25s ease;
+}
+
+.mood-card:hover {
+    background-color: var(--surface-raised);
+    border-color: var(--text-faint);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+.mood-card:focus-visible {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 2px;
+}
+
+/* Active: quiet ring + underline beneath the label, instead of inverting
+   the whole card — the emoji stays legible and it reads as "selected"
+   without breaking the card's own colors */
+.mood-card.active-mood {
+    background-color: var(--surface-raised);
+    border-color: var(--text-primary);
+    box-shadow: inset 0 0 0 1px var(--text-primary);
+}
+
+.mood-card.active-mood .mood-title {
+    color: var(--text-primary);
+}
+
+.mood-card.active-mood .mood-title::after {
+    transform: scaleX(1);
+}
+
+.mood-icon {
+    filter: grayscale(0.3) opacity(0.9);
+    transition: filter 0.25s ease, transform 0.25s ease;
+}
+
+.mood-card:hover .mood-icon,
+.mood-card.active-mood .mood-icon {
+    filter: grayscale(0) opacity(1);
+    transform: scale(1.08);
+}
+
+.mood-title {
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    position: relative;
+    display: inline-block;
+    transition: color 0.25s ease;
+}
+
+/* Small underline that draws in on active, a lighter-weight signal
+   than a full color invert */
+.mood-title::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: -4px;
+    height: 1px;
+    background-color: var(--text-primary);
+    transform: scaleX(0);
+    transition: transform 0.25s ease;
+}
+
+/* ---------- Results header ---------- */
+
+.results-header {
+    border-bottom: 1px solid var(--border);
+}
+
+.btn-clear-filter {
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    font-size: 0.85rem;
+    transition: color 0.2s ease;
+}
+
+.btn-clear-filter:hover {
+    color: var(--text-primary);
+}
+
+/* ---------- Skeleton placeholders ---------- */
+
+.skeleton-card {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--accent) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite ease-in-out;
+    border-radius: 8px;
+    min-height: 360px;
+}
+
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mood-card,
+    .mood-icon,
+    .mood-title,
+    .mood-title::after {
+        transition: none;
+    }
+    .mood-card:hover {
+        transform: none;
+    }
+    .skeleton-card {
+        animation: none;
+        background: var(--surface);
+    }
+}
+/* Fix unreadable input forms and link labels */
+form label.text-muted,
+form .form-label {
+    color: var(--text-primary) !important;
+    opacity: 0.95;
+    font-weight: 500;
+}
+
+.bg-surface p.text-muted,
+.bg-surface .small.text-muted {
+    color: var(--text-primary) !important;
+    opacity: 0.7;
+}
+
+/* Brighten the sign up link at the bottom of the card */
+.bg-surface a.text-muted {
+    color: var(--text-primary) !important;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.bg-surface a.text-muted:hover {
+    opacity: 1;
+    text-decoration: underline !important;
+}
+/* Watchlist Floating Badge Controls */
+.movie-card-interactive {
+    position: relative;
+    transition: transform 0.2s ease;
+}
+
+.watchlist-btn-toggle {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.watchlist-btn-toggle:hover {
+    background: var(--accent);
+    transform: scale(1.1);
+}
+
+.watchlist-btn-toggle.active-saved {
+    background: var(--text-primary);
+    color: var(--bg-main);
+    border-color: var(--text-primary);
+}
+/* ============================================================================
+Premium Skeleton Screen Loading Shimmer System
+============================================================================ */
+
+.skeleton-card {
+    height: 420px; /* Matches the approximate height of our production movie cards */
+    width: 100%;
+    background: linear-gradient(
+        90deg, 
+        #1a1510 25%, 
+        #261f18 50%, 
+        #1a1510 75%
+    );
+    background-size: 200% 100%;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    animation: loading-shimmer 1.4s infinite linear;
+}
+
+@keyframes loading-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Smooth fade-in transition for when the actual movie data snaps in */
+#mood-movies-output-target {
+    animation: fadeInContent 0.4s ease-out;
+}
+
+@keyframes fadeInContent {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
