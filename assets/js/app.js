@@ -1,12 +1,14 @@
 // assets/js/app.js
-//
-// Single source of truth for all interactive behavior on MovieTem:
-// mood filtering, bookmarking/watchlist toggling, the movie details modal,
-// and the "Surprise Me" button. (Previously index.php also had its own
-// inline copy of the mood/bookmark logic, which fired alongside this file
-// and referenced elements that don't exist — that duplicate has been removed.)
-
 const isLoggedIn = typeof window.MOVIETEM_IS_LOGGED_IN !== 'undefined' ? window.MOVIETEM_IS_LOGGED_IN : true;
+const csrfToken = typeof window.MOVIETEM_CSRF_TOKEN !== 'undefined' ? window.MOVIETEM_CSRF_TOKEN : '';
+
+// Prevents untrusted strings (search queries, TMDB titles) from being
+// interpreted as HTML when inserted via innerHTML.
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str ?? '';
+    return div.innerHTML;
+}
 
 function renderSkeletons(container, count = 4) {
     container.innerHTML = Array(count).fill(0).map(() => `
@@ -20,6 +22,7 @@ function movieCardHtml(movie) {
         : 'https://via.placeholder.com/500x750/1a1510/fff?text=No+Poster';
     const rating = movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A';
     const title = movie.title || 'Untitled';
+    const safeTitle = escapeHtml(title);
 
     return `
         <div class="col">
@@ -30,18 +33,18 @@ function movieCardHtml(movie) {
                         data-poster="${movie.poster_path || ''}"
                         data-rating="${movie.vote_average || ''}"
                         data-year="${movie.release_date || ''}"
-                        aria-label="Bookmark ${title}">
+                        aria-label="Bookmark ${safeTitle}">
                     <i class="bi bi-bookmark"></i>
                 </button>
                 <div class="position-relative overflow-hidden img-hover-container" data-open-modal="${movie.id}" style="cursor:pointer;">
-                    <img src="${poster}" class="card-img-top w-100 object-fit-cover" style="height: 340px;" alt="${title}">
+                    <img src="${poster}" class="card-img-top w-100 object-fit-cover" style="height: 340px;" alt="${safeTitle}">
                     <div class="card-rating-badge position-absolute rounded bg-black bg-opacity-75 small font-monospace text-warning" style="right: 10px; top: 10px;">
                         ★ ${rating}
                     </div>
                 </div>
                 <div class="card-body p-3 d-flex flex-column justify-content-between flex-grow-1">
                     <div>
-                        <h5 class="card-title text-white h6 text-truncate mb-1">${title}</h5>
+                        <h5 class="card-title text-white h6 text-truncate mb-1">${safeTitle}</h5>
                         <p class="card-text text-muted small mb-0">${movie.release_date ? movie.release_date.substring(0, 4) : 'Unknown'}</p>
                     </div>
                 </div>
@@ -53,6 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const moodCards = document.querySelectorAll('.mood-card');
     const outputTarget = document.getElementById('mood-movies-output-target');
     const randomMoodBtn = document.getElementById('random-mood-btn');
+    const searchForm = document.getElementById('global-search-form');
+    const searchInput = document.getElementById('movie-search-input');
+    const suggestionsBox = document.getElementById('search-suggestions-box');
 
     function selectMood(card) {
         moodCards.forEach(c => c.classList.remove('active-mood'));
@@ -66,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
         outputTarget.innerHTML = `
             <div class="text-start mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h4 class="text-white m-0" style="font-family:'Fraunces', serif; font-style: italic;">
-                    Showing matches for mood: <span class="text-warning">${moodLabel}</span>
+                    Showing matches for mood: <span class="text-warning">${escapeHtml(moodLabel)}</span>
                 </h4>
                 <button type="button" class="btn-clear-filter" id="clear-mood-filter">Clear filter ✕</button>
             </div>
@@ -96,6 +102,110 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
+    // Execution routine for running full text results search matching
+    function executeSearch(query) {
+        if (!query) return;
+        if (suggestionsBox) suggestionsBox.classList.add('d-none');
+        moodCards.forEach(c => c.classList.remove('active-mood'));
+
+        if (!outputTarget) return;
+
+        const safeQuery = escapeHtml(query);
+
+        outputTarget.innerHTML = `
+            <div class="text-start mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h4 class="text-white m-0" style="font-family:'Fraunces', serif; font-style: italic;">
+                    Search results for: <span class="text-warning">"${safeQuery}"</span>
+                </h4>
+                <button type="button" class="btn-clear-filter" id="clear-search-filter">Clear search ✕</button>
+            </div>
+            <div class="row row-cols-2 row-cols-md-4 g-4" id="mood-results-grid"></div>`;
+
+        const grid = document.getElementById('mood-results-grid');
+        renderSkeletons(grid);
+
+        document.getElementById('clear-search-filter')?.addEventListener('click', () => {
+            if (searchInput) searchInput.value = '';
+            outputTarget.innerHTML = '';
+        });
+
+        outputTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        fetch(`api/get_movies_by_mood.php?action=search&query=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data || !data.length) {
+                    grid.innerHTML = `<div class="col-12 text-center text-muted py-4">No movies found matching "${safeQuery}". Check your spelling or try another title!</div>`;
+                    return;
+                }
+                grid.innerHTML = data.slice(0, 8).map(movieCardHtml).join('');
+            })
+            .catch(() => {
+                grid.innerHTML = `<div class="col-12 text-center text-danger py-4">Something went wrong processing your search query. Please try again.</div>`;
+            });
+    }
+
+    if (searchForm && searchInput) {
+        searchForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            executeSearch(searchInput.value.trim());
+        });
+
+        // LIVE AUTOCOMPLETE SUGGESTIONS LOGIC WITH TIMEOUT DEBOUNCING
+        let debounceTimeout;
+        searchInput.addEventListener('input', function () {
+            clearTimeout(debounceTimeout);
+            const query = this.value.trim();
+
+            if (query.length < 2) {
+                if (suggestionsBox) suggestionsBox.classList.add('d-none');
+                return;
+            }
+
+            debounceTimeout = setTimeout(() => {
+                fetch(`api/get_movies_by_mood.php?action=suggest&query=${encodeURIComponent(query)}`)
+                    .then(res => res.json())
+                    .then(movies => {
+                        if (!movies || movies.length === 0 || !suggestionsBox) {
+                            if (suggestionsBox) suggestionsBox.classList.add('d-none');
+                            return;
+                        }
+
+                        suggestionsBox.innerHTML = movies.map(movie => {
+                            const year = movie.release_date ? ` (${movie.release_date.substring(0, 4)})` : '';
+                            const safeTitle = escapeHtml(movie.title);
+                            return `
+                                <button type="button" class="list-group-item list-group-item-action bg-dark text-white border-secondary border-opacity-10 small py-2 d-flex align-items-center gap-2 suggestion-item" data-title="${encodeURIComponent(movie.title)}">
+                                    <i class="bi bi-film text-warning-custom small"></i>
+                                    <span class="text-truncate">${safeTitle}${escapeHtml(year)}</span>
+                                </button>
+                            `;
+                        }).join('');
+                        suggestionsBox.classList.remove('d-none');
+                    });
+            }, 250);
+        });
+
+        // Hide recommendations dropdown if user clicks away
+        document.addEventListener('click', (e) => {
+            if (suggestionsBox && !searchForm.contains(e.target)) {
+                suggestionsBox.classList.add('d-none');
+            }
+        });
+
+        // Click handler for selected suggestion list items
+        if (suggestionsBox) {
+            suggestionsBox.addEventListener('click', function (e) {
+                const item = e.target.closest('.suggestion-item');
+                if (item) {
+                    const selectedTitle = decodeURIComponent(item.dataset.title);
+                    searchInput.value = selectedTitle;
+                    executeSearch(selectedTitle);
+                }
+            });
+        }
+    }
+
     moodCards.forEach(card => {
         card.addEventListener('click', () => selectMood(card));
         card.addEventListener('keydown', (e) => {
@@ -117,9 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ============================================================================
-   Global click delegate: bookmarking/watchlist toggling + details modal.
-   Handles both index.php's dynamically-rendered cards and watchlist.php's
-   server-rendered cards through one consistent code path.
+   Global click delegate: Watchlist and Details Modal
 ============================================================================ */
 document.addEventListener('click', function (e) {
     // 1. Bookmark / watchlist toggle
@@ -139,9 +247,8 @@ document.addEventListener('click', function (e) {
 
         const formData = new FormData();
         formData.append('movie_id', movieId);
+        formData.append('csrf_token', csrfToken);
         if (!isAlreadySaved) {
-            // Only need to send the display metadata when adding — removal
-            // only needs the id.
             const title = toggleBtn.dataset.title ? decodeURIComponent(toggleBtn.dataset.title) : '';
             formData.append('title', title);
             formData.append('poster_path', toggleBtn.dataset.poster || '');
@@ -167,8 +274,6 @@ document.addEventListener('click', function (e) {
                     toggleBtn.classList.remove('active-saved');
                     toggleBtn.innerHTML = '<i class="bi bi-bookmark"></i>';
 
-                    // On the watchlist page, removing an item should fade
-                    // its card out instead of just flipping the icon.
                     const watchlistCard = document.getElementById(`watchlist-item-${movieId}`);
                     if (watchlistCard) {
                         watchlistCard.style.transition = 'all 0.3s ease';
@@ -190,7 +295,7 @@ document.addEventListener('click', function (e) {
         return;
     }
 
-    // 2. Movie details modal
+    // 2. Movie details modal + Where to Watch fetch logic
     const modalTrigger = e.target.closest('[data-open-modal]');
     if (modalTrigger) {
         const movieId = modalTrigger.dataset.openModal;
@@ -202,8 +307,20 @@ document.addEventListener('click', function (e) {
         document.getElementById('modal-loading-spinner')?.classList.remove('d-none');
         document.getElementById('modal-content-target')?.classList.add('d-none');
 
-        // Routed through our own server-side endpoint — the TMDB key never
-        // touches the browser.
+        // Bind the current movie ID onto the rating module context
+        const ratingContainer = document.getElementById('user-star-rating-container');
+        if (ratingContainer) {
+            ratingContainer.dataset.currentMovieId = movieId;
+            ratingContainer.querySelectorAll('.star-select-btn').forEach(s => {
+                s.classList.remove('text-warning');
+                s.classList.add('text-muted');
+            });
+        }
+        const reviewInput = document.getElementById('modal-review-text-input');
+        if (reviewInput) reviewInput.value = '';
+        const statusMsg = document.getElementById('review-status-msg');
+        if (statusMsg) statusMsg.innerText = '';
+
         fetch(`api/get_movie_details.php?id=${encodeURIComponent(movieId)}`)
             .then(res => res.json())
             .then(movie => {
@@ -223,6 +340,26 @@ document.addEventListener('click', function (e) {
                     : 'https://via.placeholder.com/500x750/1F150C/E1DCC9?text=No+Poster';
                 document.getElementById('modal-movie-poster').src = posterPath;
                 document.getElementById('modal-backdrop-blur').style.backgroundImage = `url(${posterPath})`;
+
+                // BUILD STREAMING PROVIDERS LIST
+                const providersTarget = document.getElementById('modal-movie-providers-target');
+                if (providersTarget) {
+                    providersTarget.innerHTML = '';
+
+                    const regionalProviders = movie['watch/providers']?.results?.IN;
+                    const flatStreamingOptions = regionalProviders?.flatrate || regionalProviders?.rent || [];
+
+                    if (flatStreamingOptions.length > 0) {
+                        providersTarget.innerHTML = flatStreamingOptions.slice(0, 4).map(provider => `
+                            <div class="d-flex align-items-center bg-dark bg-opacity-50 border border-secondary border-opacity-10 p-1 pe-2 rounded-2" title="${escapeHtml(provider.provider_name)}">
+                                <img src="https://image.tmdb.org/t/p/w92${provider.logo_path}" alt="${escapeHtml(provider.provider_name)}" class="rounded" style="width:24px; height:24px; object-fit:cover;">
+                                <span class="ms-2 font-sans-serif text-white-50" style="font-size:0.75rem;">${escapeHtml(provider.provider_name)}</span>
+                            </div>
+                        `).join('');
+                    } else {
+                        providersTarget.innerHTML = '<span class="text-muted small">Not currently streaming locally. Check theater listings!</span>';
+                    }
+                }
 
                 const trailerBtn = document.getElementById('modal-movie-trailer-btn');
                 const videos = movie.videos && movie.videos.results ? movie.videos.results : [];
@@ -245,4 +382,109 @@ document.addEventListener('click', function (e) {
                 }
             });
     }
+});
+
+/* ============================================================================
+   Star Rating + Review Submission
+============================================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+    let chosenRatingValue = 0;
+    const starContainer = document.getElementById('user-star-rating-container');
+    const reviewTextInput = document.getElementById('modal-review-text-input');
+    const submitBtn = document.getElementById('submit-review-action-btn');
+    const statusTextFeedback = document.getElementById('review-status-msg');
+
+    if (!starContainer || !submitBtn) return;
+
+    const allStars = starContainer.querySelectorAll('.star-select-btn');
+
+    function paintStars(ratingCount) {
+        allStars.forEach(star => {
+            const currentStarValue = parseInt(star.getAttribute('data-value'));
+            if (currentStarValue <= ratingCount) {
+                star.classList.remove('text-muted');
+                star.classList.add('text-warning');
+            } else {
+                star.classList.remove('text-warning');
+                star.classList.add('text-muted');
+            }
+        });
+    }
+
+    allStars.forEach(star => {
+        star.addEventListener('mouseenter', (e) => {
+            const hoveredValue = parseInt(e.target.getAttribute('data-value'));
+            paintStars(hoveredValue);
+        });
+
+        star.addEventListener('mouseleave', () => {
+            paintStars(chosenRatingValue);
+        });
+
+        star.addEventListener('click', (e) => {
+            if (!isLoggedIn) {
+                statusTextFeedback.className = "small text-danger font-monospace";
+                statusTextFeedback.innerText = "Please log in first!";
+                return;
+            }
+            chosenRatingValue = parseInt(e.target.getAttribute('data-value'));
+            paintStars(chosenRatingValue);
+        });
+    });
+
+    submitBtn.addEventListener('click', () => {
+        if (!isLoggedIn) {
+            statusTextFeedback.className = "small text-danger font-monospace";
+            statusTextFeedback.innerText = "Log in required.";
+            return;
+        }
+
+        const activeMovieId = starContainer.dataset.currentMovieId;
+        const feedbackMessage = reviewTextInput.value.trim();
+
+        if (!activeMovieId) {
+            statusTextFeedback.className = "small text-danger font-monospace";
+            statusTextFeedback.innerText = "Error: Invalid target identification.";
+            return;
+        }
+
+        if (chosenRatingValue === 0) {
+            statusTextFeedback.className = "small text-danger font-monospace";
+            statusTextFeedback.innerText = "Select at least 1 star.";
+            return;
+        }
+
+        submitBtn.disabled = true;
+        statusTextFeedback.className = "small text-muted font-monospace";
+        statusTextFeedback.innerText = "Saving data...";
+
+        const formPayload = new FormData();
+        formPayload.append('movie_id', activeMovieId);
+        formPayload.append('rating', chosenRatingValue);
+        formPayload.append('review_text', feedbackMessage);
+        formPayload.append('csrf_token', csrfToken);
+
+        fetch('api/submit_review.php', {
+            method: 'POST',
+            body: formPayload
+        })
+        .then(response => response.json())
+        .then(data => {
+            submitBtn.disabled = false;
+            if (data.status === 'success') {
+                statusTextFeedback.className = "small text-success font-monospace";
+                statusTextFeedback.innerText = "Saved successfully!";
+                setTimeout(() => { statusTextFeedback.innerText = ''; }, 3000);
+            } else {
+                statusTextFeedback.className = "small text-danger font-monospace";
+                statusTextFeedback.innerText = data.message || "Execution error.";
+            }
+        })
+        .catch(error => {
+            submitBtn.disabled = false;
+            statusTextFeedback.className = "small text-danger font-monospace";
+            statusTextFeedback.innerText = "Network connection error.";
+            console.error('Submission error context details:', error);
+        });
+    });
 });

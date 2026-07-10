@@ -25,11 +25,25 @@
                         </div>
                         <p id="modal-movie-overview" class="text-custom-muted small line-height-relaxed mb-4"></p>
 
-                        <div class="d-flex gap-3 flex-wrap">
+                        <div class="d-flex gap-3 flex-wrap mb-3">
                             <a id="modal-movie-trailer-btn" href="#" target="_blank" rel="noopener" class="btn btn-warning-custom btn-sm">
                                 <i class="bi bi-play-fill me-1"></i>Watch Trailer
                             </a>
                         </div>
+
+                        <div id="modal-movie-providers-target" class="d-flex gap-2 flex-wrap mb-3"></div>
+
+                        <hr class="border-secondary border-opacity-20 my-3">
+
+                        <h6 class="small text-uppercase text-muted tracking-wider mb-2">Your Rating</h6>
+                        <div id="user-star-rating-container" class="d-flex gap-1 mb-2" data-current-movie-id="">
+                            <?php foreach ([1, 2, 3, 4, 5] as $val): ?>
+                                <button type="button" class="star-select-btn btn btn-link p-0 text-muted" data-value="<?php echo $val; ?>" style="font-size: 1.4rem; text-decoration: none;">★</button>
+                            <?php endforeach; ?>
+                        </div>
+                        <textarea id="modal-review-text-input" class="form-control bg-black border-secondary text-white mb-2" rows="2" placeholder="Optional review..."></textarea>
+                        <button id="submit-review-action-btn" type="button" class="btn btn-warning-custom btn-sm">Save Rating</button>
+                        <div id="review-status-msg" class="mt-2"></div>
                     </div>
                 </div>
             </div>

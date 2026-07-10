@@ -12,14 +12,23 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'message' => 'Invalid or expired session token.']);
+    exit;
+}
+
 require_once '../config/database.php';
 
 $userId       = $_SESSION['user_id'];
 $movieId      = isset($_POST['movie_id']) ? intval($_POST['movie_id']) : 0;
 $title        = isset($_POST['title']) ? trim($_POST['title']) : null;
-$posterPath   = isset($_POST['poster_path']) && $_POST['poster_path'] !== 'null' ? trim($_POST['poster_path']) : null;
-$voteAverage  = isset($_POST['vote_average']) ? (float) $_POST['vote_average'] : null;
-$releaseDate  = isset($_POST['release_date']) ? trim($_POST['release_date']) : null;
+$posterPath   = (isset($_POST['poster_path']) && $_POST['poster_path'] !== 'null' && $_POST['poster_path'] !== '')
+                    ? trim($_POST['poster_path']) : null;
+$voteAverage  = (isset($_POST['vote_average']) && $_POST['vote_average'] !== '')
+                    ? (float) $_POST['vote_average'] : null;
+$releaseDate  = (isset($_POST['release_date']) && $_POST['release_date'] !== '')
+                    ? trim($_POST['release_date']) : null;
 
 if ($movieId <= 0) {
     http_response_code(400);

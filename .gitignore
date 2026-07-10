@@ -1,6 +1,7 @@
-# Ignore local database credentials
-config/database.php
+# Ignore configuration files with DB credentials
+config.php
+db.php
 
-# Ignore OS junk files
+# OS files
 .DS_Store
 Thumbs.db

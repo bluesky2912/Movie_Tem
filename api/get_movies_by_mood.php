@@ -3,47 +3,45 @@
 require_once '../config/tmdb.php';
 
 header('Content-Type: application/json');
+$tmdb = new TMDBEngine();
 
+// Handle Autocomplete Suggestions Dropdown
+if (isset($_GET['action']) && $_GET['action'] === 'suggest') {
+    $query = isset($_GET['query']) ? trim($_GET['query']) : '';
+    if (strlen($query) < 2) {
+        echo json_encode([]);
+        exit;
+    }
+    $response = $tmdb->searchMovies($query);
+    if (isset($response['results'])) {
+        // Return top 5 matches only for clean autocomplete previewing
+        echo json_encode(array_slice($response['results'], 0, 5));
+    } else {
+        echo json_encode([]);
+    }
+    exit;
+}
+
+// Handle Global Full Text Search Queries
+if (isset($_GET['action']) && $_GET['action'] === 'search') {
+    if (!isset($_GET['query']) || empty(trim($_GET['query']))) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Missing search query parameter.']);
+        exit;
+    }
+    $query = trim($_GET['query']);
+    $response = $tmdb->searchMovies($query);
+    echo json_encode($response['results'] ?? []);
+    exit;
+}
+
+// Handle Traditional Mood Queries
 if (!isset($_GET['mood'])) {
     http_response_code(400);
-    echo json_encode(['error' => 'Missing mood parameter.']);
+    echo json_encode(['error' => 'Missing mood or search parameter.']);
     exit;
 }
 
-$moodKey = strtoupper(trim($_GET['mood']));
-$moodKeyClean = str_replace([' ', '-'], '', $moodKey);
-
-$moodToGenreMap = [
-    'HAPPY'        => 35,
-    'MINDBENDING'  => '878,9648',
-    'MIND-BENDING' => '878,9648',
-    'HORROR'       => 27,
-    'HORRORNIGHT'  => 27,
-    'HORROR NIGHT' => 27,
-    'MOTIVATIONAL' => 18,
-    'RAINY'        => 10749,
-    'RAINYDAY'     => 10749,
-    'RAINY DAY'    => 10749,
-    'SCIFI'        => 878,
-    'SCI-FI'       => 878
-];
-
-if (isset($moodToGenreMap[$moodKeyClean])) {
-    $genreId = $moodToGenreMap[$moodKeyClean];
-} elseif (isset($moodToGenreMap[$moodKey])) {
-    $genreId = $moodToGenreMap[$moodKey];
-} else {
-    http_response_code(400);
-    echo json_encode(['error' => 'Unrecognized mood.']);
-    exit;
-}
-
-$tmdb = new TMDBEngine();
-$response = $tmdb->getMoviesByMood($genreId);
-
-if (isset($response['results'])) {
-    echo json_encode($response['results']);
-} else {
-    http_response_code(502);
-    echo json_encode(['error' => 'Could not fetch movies right now.']);
-}
+$moodKey = trim($_GET['mood']);
+$response = $tmdb->getMoviesByMood($moodKey);
+echo json_encode($response['results'] ?? []);

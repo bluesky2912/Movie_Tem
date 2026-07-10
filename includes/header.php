@@ -3,6 +3,9 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -18,6 +21,10 @@ if (session_status() === PHP_SESSION_NONE) {
     <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body class="bg-main text-white">
+
+<script>
+    window.MOVIETEM_CSRF_TOKEN = <?php echo json_encode($_SESSION['csrf_token']); ?>;
+</script>
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-main border-bottom border-secondary border-opacity-10 py-3 sticky-top">
     <div class="container">
