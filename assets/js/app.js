@@ -307,7 +307,7 @@ document.addEventListener('click', function (e) {
         document.getElementById('modal-loading-spinner')?.classList.remove('d-none');
         document.getElementById('modal-content-target')?.classList.add('d-none');
 
-        // Bind the current movie ID onto the rating module context
+        // Bind the current movie ID onto the rating module context, and reset UI
         const ratingContainer = document.getElementById('user-star-rating-container');
         if (ratingContainer) {
             ratingContainer.dataset.currentMovieId = movieId;
@@ -320,6 +320,29 @@ document.addEventListener('click', function (e) {
         if (reviewInput) reviewInput.value = '';
         const statusMsg = document.getElementById('review-status-msg');
         if (statusMsg) statusMsg.innerText = '';
+        window.chosenRatingValue = 0;
+
+        // Pre-fill any rating/review the user already saved for this movie
+        if (isLoggedIn) {
+            fetch(`api/get_user_rating.php?movie_id=${encodeURIComponent(movieId)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.rating && data.rating > 0 && ratingContainer) {
+                        window.chosenRatingValue = data.rating;
+                        ratingContainer.querySelectorAll('.star-select-btn').forEach(star => {
+                            const val = parseInt(star.getAttribute('data-value'));
+                            if (val <= data.rating) {
+                                star.classList.remove('text-muted');
+                                star.classList.add('text-warning');
+                            }
+                        });
+                    }
+                    if (data.review_text && reviewInput) {
+                        reviewInput.value = data.review_text;
+                    }
+                })
+                .catch(err => console.error('Could not load existing rating:', err));
+        }
 
         fetch(`api/get_movie_details.php?id=${encodeURIComponent(movieId)}`)
             .then(res => res.json())
@@ -388,7 +411,7 @@ document.addEventListener('click', function (e) {
    Star Rating + Review Submission
 ============================================================================ */
 document.addEventListener('DOMContentLoaded', () => {
-    let chosenRatingValue = 0;
+    window.chosenRatingValue = 0;
     const starContainer = document.getElementById('user-star-rating-container');
     const reviewTextInput = document.getElementById('modal-review-text-input');
     const submitBtn = document.getElementById('submit-review-action-btn');
@@ -418,7 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         star.addEventListener('mouseleave', () => {
-            paintStars(chosenRatingValue);
+            paintStars(window.chosenRatingValue);
         });
 
         star.addEventListener('click', (e) => {
@@ -427,8 +450,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusTextFeedback.innerText = "Please log in first!";
                 return;
             }
-            chosenRatingValue = parseInt(e.target.getAttribute('data-value'));
-            paintStars(chosenRatingValue);
+            window.chosenRatingValue = parseInt(e.target.getAttribute('data-value'));
+            paintStars(window.chosenRatingValue);
         });
     });
 
@@ -448,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (chosenRatingValue === 0) {
+        if (window.chosenRatingValue === 0) {
             statusTextFeedback.className = "small text-danger font-monospace";
             statusTextFeedback.innerText = "Select at least 1 star.";
             return;
@@ -460,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const formPayload = new FormData();
         formPayload.append('movie_id', activeMovieId);
-        formPayload.append('rating', chosenRatingValue);
+        formPayload.append('rating', window.chosenRatingValue);
         formPayload.append('review_text', feedbackMessage);
         formPayload.append('csrf_token', csrfToken);
 
