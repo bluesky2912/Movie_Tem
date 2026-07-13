@@ -1,24 +1,49 @@
 /* ===== MovieTem — Theme ===== */
+/* Design language: a film print, not a dashboard. Grain, sprockets, ticket
+   stubs, and marquee brass — materials from an actual cinema, not a UI kit. */
+
 :root {
-    --bg-main: #000000;
-    --surface: #1F150C;
-    --surface-raised: #2A1D10;
-    --accent: #412D15;
-    --text-primary: #E1DCC9;
-    --text-muted: rgba(225, 220, 201, 0.6);
-    --text-faint: rgba(225, 220, 201, 0.4);
-    --border: rgba(225, 220, 201, 0.1);
+    --bg-main: #080503;
+    --surface: #1B120A;
+    --surface-raised: #26190D;
+    --accent: #4A331A;          /* base brass-brown, used for resting buttons */
+    --accent-bright: #C9962E;   /* marquee gold — reserved for hover/focus/emphasis */
+    --accent-bright-dim: rgba(201, 150, 46, 0.35);
+    --text-primary: #F2EBDA;
+    --text-muted: rgba(242, 235, 218, 0.62);
+    --text-faint: rgba(242, 235, 218, 0.38);
+    --border: rgba(242, 235, 218, 0.1);
     --success: #6AAE7F;
     --error: #C05A5A;
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
 
+/* ---------- Base + film grain ---------- */
+
 body {
     background-color: var(--bg-main);
     color: var(--text-primary);
     font-family: 'Inter', sans-serif;
     letter-spacing: -0.01em;
+    position: relative;
+}
+
+/* A projected print always has grain. This is the one texture applied
+   globally — everything else stays flat so this reads as deliberate. */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body::before { display: none; }
 }
 
 .bg-surface {
@@ -27,30 +52,32 @@ body {
 }
 
 .navbar-custom {
-    background: rgba(0, 0, 0, 0.9) !important;
+    background: rgba(8, 5, 3, 0.92) !important;
     border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
 }
 
 .nav-link {
     color: var(--text-primary) !important;
     font-weight: 500;
     opacity: 0.65;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.2s ease, color 0.2s ease;
 }
 
 .nav-link:hover {
     opacity: 1;
+    color: var(--accent-bright) !important;
 }
 
 /* ---------- Hero ---------- */
 
 .hero-kicker {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.14em;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--accent-bright);
     margin-bottom: 1rem;
 }
 
@@ -72,9 +99,12 @@ h1.display-4 {
 
 .hero-rule {
     width: 2px;
-    background-color: var(--accent);
+    background-color: var(--accent-bright-dim);
     align-self: stretch;
 }
+
+/* ---------- Buttons: ticket-stub notch instead of a generic pill ---------- */
+/* The circular bite on either side is the cut you tear off a real ticket. */
 
 .btn-warning-custom {
     background-color: var(--accent);
@@ -83,12 +113,34 @@ h1.display-4 {
     font-weight: 600;
     padding: 12px 30px;
     border-radius: 6px;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    position: relative;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease, transform 0.15s ease;
 }
 
+.btn-warning-custom::before,
+.btn-warning-custom::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    background: var(--bg-main);
+    border-radius: 50%;
+    transform: translateY(-50%);
+    transition: background 0.2s ease;
+}
+.btn-warning-custom::before { left: -5px; }
+.btn-warning-custom::after { right: -5px; }
+
 .btn-warning-custom:hover {
-    background-color: #533a1c;
-    border-color: #533a1c;
+    background-color: #5C4020;
+    border-color: var(--accent-bright);
+    box-shadow: 0 0 0 1px var(--accent-bright-dim), 0 8px 24px rgba(201, 150, 46, 0.18);
+    transform: translateY(-1px);
+}
+
+.btn-warning-custom:active {
+    transform: translateY(0);
 }
 
 .btn-outline-accent {
@@ -98,16 +150,26 @@ h1.display-4 {
     border-radius: 6px;
     font-weight: 500;
     padding: 11px 28px;
-    transition: border-color 0.2s ease, background-color 0.2s ease;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
 .btn-outline-accent:hover {
     background-color: var(--accent);
-    border-color: var(--accent);
+    border-color: var(--accent-bright);
+    color: var(--accent-bright);
 }
 
-/* ---------- Section label — monospace "code comment" style,
-   echoes the "workstation environment" language from the hero copy ---------- */
+/* Keyboard focus should always be visible — brass ring, not a generic blue box */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+.mood-card:focus-visible {
+    outline: 2px solid var(--accent-bright);
+    outline-offset: 2px;
+}
+
+/* ---------- Section label ---------- */
 
 .section-label {
     font-family: 'JetBrains Mono', monospace;
@@ -124,47 +186,48 @@ h1.display-4 {
     color: var(--text-primary);
 }
 
-/* ---------- Mood Cards ---------- */
+/* ---------- Mood Cards: sprocket-hole edge, like a strip of film ---------- */
 
 .mood-card {
     background-color: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 4px;
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
     transition: transform 0.25s cubic-bezier(0.165, 0.84, 0.44, 1),
                 border-color 0.25s ease,
                 background-color 0.25s ease,
                 box-shadow 0.25s ease;
 }
 
+/* Row of sprocket holes along the top edge — a literal film-strip detail */
+.mood-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 6px;
+    background-image: radial-gradient(circle, var(--bg-main) 1.6px, transparent 1.6px);
+    background-size: 12px 6px;
+    background-position: 4px 0;
+    opacity: 0.5;
+}
+
 .mood-card:hover {
     background-color: var(--surface-raised);
-    border-color: var(--text-faint);
+    border-color: var(--accent-bright-dim);
     transform: translateY(-4px);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--accent-bright-dim);
 }
 
-.mood-card:focus-visible {
-    outline: 2px solid var(--text-primary);
-    outline-offset: 2px;
-}
-
-/* Active: quiet ring + underline beneath the label, instead of inverting
-   the whole card — the emoji stays legible and it reads as "selected"
-   without breaking the card's own colors */
 .mood-card.active-mood {
     background-color: var(--surface-raised);
-    border-color: var(--text-primary);
-    box-shadow: inset 0 0 0 1px var(--text-primary);
+    border-color: var(--accent-bright);
+    box-shadow: inset 0 0 0 1px var(--accent-bright);
 }
 
-.mood-card.active-mood .mood-title {
-    color: var(--text-primary);
-}
-
-.mood-card.active-mood .mood-title::after {
-    transform: scaleX(1);
-}
+.mood-card.active-mood .mood-title { color: var(--accent-bright); }
+.mood-card.active-mood .mood-title::after { transform: scaleX(1); background-color: var(--accent-bright); }
 
 .mood-icon {
     filter: grayscale(0.3) opacity(0.9);
@@ -185,8 +248,6 @@ h1.display-4 {
     transition: color 0.25s ease;
 }
 
-/* Small underline that draws in on active, a lighter-weight signal
-   than a full color invert */
 .mood-title::after {
     content: "";
     position: absolute;
@@ -195,6 +256,20 @@ h1.display-4 {
     background-color: var(--text-primary);
     transform: scaleX(0);
     transition: transform 0.25s ease;
+}
+
+/* ---------- Ticket-tear divider — replaces plain <hr> where used ---------- */
+
+hr {
+    border: none;
+    height: 1px;
+    background: repeating-linear-gradient(
+        to right,
+        var(--border) 0, var(--border) 6px,
+        transparent 6px, transparent 12px
+    );
+    opacity: 1;
+    margin: 1.5rem 0;
 }
 
 /* ---------- Results header ---------- */
@@ -212,40 +287,47 @@ h1.display-4 {
 }
 
 .btn-clear-filter:hover {
-    color: var(--text-primary);
+    color: var(--accent-bright);
 }
 
 /* ---------- Skeleton placeholders ---------- */
 
 .skeleton-card {
-    background: linear-gradient(90deg, var(--surface) 25%, var(--accent) 50%, var(--surface) 75%);
+    height: 420px;
+    width: 100%;
+    background: linear-gradient(90deg, #1a1510 25%, #261f18 50%, #1a1510 75%);
     background-size: 200% 100%;
-    animation: skeleton-loading 1.5s infinite ease-in-out;
-    border-radius: 8px;
-    min-height: 360px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    animation: loading-shimmer 1.4s infinite linear;
 }
 
-@keyframes skeleton-loading {
+@keyframes loading-shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .mood-card,
-    .mood-icon,
-    .mood-title,
-    .mood-title::after {
-        transition: none;
-    }
-    .mood-card:hover {
-        transform: none;
-    }
-    .skeleton-card {
-        animation: none;
-        background: var(--surface);
-    }
+#mood-movies-output-target {
+    animation: fadeInContent 0.4s ease-out;
 }
-/* Fix unreadable input forms and link labels */
+
+@keyframes fadeInContent {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mood-card, .mood-icon, .mood-title, .mood-title::after,
+    .btn-warning-custom, #mood-movies-output-target {
+        transition: none;
+        animation: none;
+    }
+    .mood-card:hover { transform: none; }
+    .skeleton-card { animation: none; background: var(--surface); }
+}
+
+/* ---------- Forms ---------- */
+
 form label.text-muted,
 form .form-label {
     color: var(--text-primary) !important;
@@ -259,10 +341,9 @@ form .form-label {
     opacity: 0.7;
 }
 
-/* Brighten the sign up link at the bottom of the card */
 .bg-surface a.text-muted {
-    color: var(--text-primary) !important;
-    opacity: 0.8;
+    color: var(--accent-bright) !important;
+    opacity: 0.85;
     transition: opacity 0.2s ease;
 }
 
@@ -270,7 +351,20 @@ form .form-label {
     opacity: 1;
     text-decoration: underline !important;
 }
-/* Watchlist Floating Badge Controls */
+
+input.form-control,
+textarea.form-control {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input.form-control:focus,
+textarea.form-control:focus {
+    border-color: var(--accent-bright) !important;
+    box-shadow: 0 0 0 3px var(--accent-bright-dim) !important;
+}
+
+/* ---------- Movie cards / watchlist ---------- */
+
 .movie-card-interactive {
     position: relative;
     transition: transform 0.2s ease;
@@ -281,7 +375,7 @@ form .form-label {
     top: 10px;
     left: 10px;
     z-index: 10;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(8, 5, 3, 0.75);
     border: 1px solid var(--border);
     color: var(--text-primary);
     border-radius: 50%;
@@ -296,54 +390,24 @@ form .form-label {
 
 .watchlist-btn-toggle:hover {
     background: var(--accent);
+    border-color: var(--accent-bright);
     transform: scale(1.1);
 }
 
 .watchlist-btn-toggle.active-saved {
-    background: var(--text-primary);
+    background: var(--accent-bright);
     color: var(--bg-main);
-    border-color: var(--text-primary);
-}
-/* ============================================================================
-Premium Skeleton Screen Loading Shimmer System
-============================================================================ */
-
-.skeleton-card {
-    height: 420px; /* Matches the approximate height of our production movie cards */
-    width: 100%;
-    background: linear-gradient(
-        90deg, 
-        #1a1510 25%, 
-        #261f18 50%, 
-        #1a1510 75%
-    );
-    background-size: 200% 100%;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.03);
-    animation: loading-shimmer 1.4s infinite linear;
+    border-color: var(--accent-bright);
 }
 
-@keyframes loading-shimmer {
-    0% {
-        background-position: 200% 0;
-    }
-    100% {
-        background-position: -200% 0;
-    }
+.card-rating-badge {
+    padding: 3px 8px;
 }
 
-/* Smooth fade-in transition for when the actual movie data snaps in */
-#mood-movies-output-target {
-    animation: fadeInContent 0.4s ease-out;
+/* Star rating — brass gold on hover/selected, not Bootstrap's default amber */
+.star-select-btn {
+    transition: transform 0.15s ease, color 0.15s ease;
 }
-
-@keyframes fadeInContent {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.star-select-btn:hover {
+    transform: scale(1.15);
 }

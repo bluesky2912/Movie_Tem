@@ -122,6 +122,19 @@ include 'includes/header.php';
     </div>
     <?php endif; ?>
 
+    <?php if (isset($_SESSION['user_id'])): ?>
+    <div id="for-you-section" class="pt-2 mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h3 class="text-white m-0" style="font-family: 'Fraunces', serif; font-style: italic;">Picked for you</h3>
+            <span class="small text-muted font-monospace">Based on what you've rated</span>
+        </div>
+        <div class="row row-cols-2 row-cols-md-4 g-4" id="for-you-grid"></div>
+    </div>
+    <div id="for-you-empty-state" class="d-none bg-surface p-4 rounded-4 border border-secondary border-opacity-10 mb-5 text-center">
+        <p class="small text-muted mb-0">Rate a few movies 4★ or higher and we'll start recommending titles picked just for you.</p>
+    </div>
+    <?php endif; ?>
+
     <!-- Mood Selector Section (12 Expanded Moods) -->
     <div id="mood-selector-anchor" class="pt-2 mb-4">
         <h3 class="text-white mb-4" style="font-family: 'Fraunces', serif; font-style: italic;">How does your soul feel tonight?</h3>

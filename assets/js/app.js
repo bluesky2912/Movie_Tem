@@ -224,6 +224,33 @@ document.addEventListener('DOMContentLoaded', () => {
             randomCard.click();
         });
     }
+
+    // "For You" — personalized recommendations based on the user's ratings
+    if (isLoggedIn) {
+        const forYouSection = document.getElementById('for-you-section');
+        const forYouGrid = document.getElementById('for-you-grid');
+        const forYouEmpty = document.getElementById('for-you-empty-state');
+
+        if (forYouSection && forYouGrid) {
+            renderSkeletons(forYouGrid, 4);
+            fetch('api/get_recommendations.php')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' && data.movies && data.movies.length > 0) {
+                        forYouGrid.innerHTML = data.movies.map(movieCardHtml).join('');
+                    } else {
+                        forYouSection.classList.add('d-none');
+                        if (data.status === 'not_enough_data' && forYouEmpty) {
+                            forYouEmpty.classList.remove('d-none');
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error('Could not load recommendations:', err);
+                    forYouSection.classList.add('d-none');
+                });
+        }
+    }
 });
 
 /* ============================================================================

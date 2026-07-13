@@ -4,6 +4,17 @@ class TMDBEngine {
     private $apiKey = "YOUR_TMDB_API_KEY_HERE";
     private $baseUrl = "https://api.themoviedb.org/3/";
 
+    public function getMoviesByGenres($genreIds) {
+        // Pipe ("|") means OR — any movie matching at least one of these genres
+        return $this->fetchFromTMDB('discover/movie', [
+            'with_genres'    => implode('|', $genreIds),
+            'sort_by'        => 'vote_average.desc',
+            'vote_count.gte' => 200, // filters out obscure/low-signal titles
+            'include_adult'  => 'false',
+            'page'           => 1
+        ]);
+    }
+
     private function fetchFromTMDB($endpoint, $queryParams = []) {
         $queryParams['api_key'] = $this->apiKey;
         $queryString = http_build_query($queryParams);

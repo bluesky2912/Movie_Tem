@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once '../config/database.php';
+require_once '../config/tmdb.php';
 
 header('Content-Type: application/json');
 
@@ -36,16 +37,30 @@ if ($movieId <= 0 || $rating < 1 || $rating > 5) {
     exit;
 }
 
+// Fetch genre IDs once, here, so recommendations never need to ask TMDB
+// again for this rating — it's cached straight into the row.
+$genreIdsCsv = null;
+try {
+    $tmdb = new TMDBEngine();
+    $details = $tmdb->getMovieDetails($movieId);
+    if (isset($details['genres']) && is_array($details['genres'])) {
+        $genreIdsCsv = implode(',', array_column($details['genres'], 'id'));
+    }
+} catch (Exception $e) {
+    error_log('submit_review genre fetch warning: ' . $e->getMessage());
+    // Not fatal — the rating still saves, just without genre data this time
+}
+
 try {
     $database = new Database();
     $db = $database->getConnection();
 
     $stmt = $db->prepare(
-        "INSERT INTO movie_ratings (user_id, movie_id, rating, review_text)
-         VALUES (?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE rating = VALUES(rating), review_text = VALUES(review_text)"
+        "INSERT INTO movie_ratings (user_id, movie_id, rating, review_text, genre_ids)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE rating = VALUES(rating), review_text = VALUES(review_text), genre_ids = VALUES(genre_ids)"
     );
-    $stmt->execute([$userId, $movieId, $rating, $review]);
+    $stmt->execute([$userId, $movieId, $rating, $review, $genreIdsCsv]);
 
     echo json_encode(['status' => 'success', 'message' => 'Saved successfully!']);
 } catch (Exception $e) {
