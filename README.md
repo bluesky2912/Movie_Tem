@@ -6,12 +6,11 @@ MovieTem is a mood-based movie discovery platform. Instead of scrolling through 
 
 
   Add 2-3 screenshots here once your site is running. Example:
-  ![Homepage](screenshots/homepage.png)im
-  ![Movie Modal](screenshots/modal.png)
-  ![Picked For You](screenshots/for-you.png)
-
-
----
+  <img src="screenshots/homepage.png" alt="VibeCraft Homepage" width="800">
+  <img src="screenshots/how to use.png" alt="VibeCraft Homepage" width="800">
+  <img src="screenshots/mood finder.png" alt="VibeCraft Homepage" width="800">
+  <img src="screenshots/picked for you .png" alt="VibeCraft Homepage" width="800">
+  <img src="screenshots/trendingtoday.png" alt="VibeCraft Homepage" width="800">
 
 ## ✨ Features
 
