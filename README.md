@@ -4,11 +4,11 @@
 
 MovieTem is a mood-based movie discovery platform. Instead of scrolling through endless grids of titles, pick how you feel — happy, mind-bending, chill, nostalgic — and get matched with something worth watching tonight. Rate what you watch, and MovieTem learns your taste to recommend more of it.
 
-  <img src="screenshots/homepage.png" alt="VibeCraft Homepage" width="800">
-  <img src="screenshots/how to use.png" alt="VibeCraft Homepage" width="800">
-  <img src="screenshots/mood finder.png" alt="VibeCraft Homepage" width="800">
-  <img src="screenshots/picked for you .png" alt="VibeCraft Homepage" width="800">
-  <img src="screenshots/trendingtoday.png" alt="VibeCraft Homepage" width="800">
+  <img src="screenshots/homepage.png" alt="Movietem  Homepage" width="800">
+  <img src="screenshots/trendingtoday.png" alt="Movietem  trendingtoday" width="800">
+  <img src="screenshots/mood finder.png" alt="Movietem mood finder" width="800">
+  <img src="screenshots/picked for you .png" alt="Movietem  picked for you" width="800">
+  <img src="screenshots/how to use.png" alt="Movietem  how to use" width="800">
 
 ## ✨ Features
 
