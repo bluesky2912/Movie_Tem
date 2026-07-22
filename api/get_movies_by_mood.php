@@ -31,6 +31,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'search') {
     }
     $query = trim($_GET['query']);
     $response = $tmdb->searchMovies($query);
+    if (isset($response['error'])) {
+        http_response_code(502);
+        echo json_encode(['error' => $response['error']]);
+        exit;
+    }
     echo json_encode($response['results'] ?? []);
     exit;
 }
@@ -44,4 +49,9 @@ if (!isset($_GET['mood'])) {
 
 $moodKey = trim($_GET['mood']);
 $response = $tmdb->getMoviesByMood($moodKey);
+if (isset($response['error'])) {
+    http_response_code(502);
+    echo json_encode(['error' => $response['error']]);
+    exit;
+}
 echo json_encode($response['results'] ?? []);

@@ -216,7 +216,6 @@ textarea:focus-visible,
 .mood-card:hover {
     background-color: var(--surface-raised);
     border-color: var(--accent-bright-dim);
-    transform: translateY(-4px);
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--accent-bright-dim);
 }
 
@@ -367,7 +366,6 @@ textarea.form-control:focus {
 
 .movie-card-interactive {
     position: relative;
-    transition: transform 0.2s ease;
 }
 
 .watchlist-btn-toggle {
@@ -410,4 +408,449 @@ textarea.form-control:focus {
 }
 .star-select-btn:hover {
     transform: scale(1.15);
+}
+
+/* ===========================================================================
+   CINEMATIC MOTION SYSTEM — PART 1
+   Signature: modal opens like a projector iris. Everything else (scroll
+   reveal, card hover, marquee glow, Ken Burns zoom) supports that one idea
+   rather than competing with it.
+=========================================================================== */
+
+/* ---------- Scroll reveal: "focus pull" — blurred, out of frame, then
+   sharpens into focus as it enters view, like a lens racking focus ---------- */
+
+.reveal-on-scroll {
+    opacity: 0;
+    transform: translateY(26px) scale(0.98);
+    filter: blur(6px);
+    transition: opacity 0.8s cubic-bezier(0.19, 1, 0.22, 1),
+                transform 0.8s cubic-bezier(0.19, 1, 0.22, 1),
+                filter 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+    will-change: opacity, transform, filter;
+}
+
+.reveal-on-scroll.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+}
+
+/* ---------- Hero load: iris-open + a single projector beam sweep ---------- */
+
+.hero-iris-reveal {
+    animation: irisOpen 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes irisOpen {
+    from { clip-path: circle(0% at 25% 50%); opacity: 0; }
+    to   { clip-path: circle(150% at 25% 50%); opacity: 1; }
+}
+
+.projector-beam {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    background: linear-gradient(100deg, transparent 42%, rgba(242, 235, 218, 0.14) 50%, transparent 58%);
+    transform: translateX(-130%);
+    animation: beamSweep 1.5s 0.2s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+@keyframes beamSweep {
+    to { transform: translateX(130%); }
+}
+
+/* ---------- Trending carousel: slow Ken Burns zoom on the active slide ---------- */
+
+.carousel-item {
+    background-position: center !important;
+}
+
+.carousel-item.active {
+    animation: kenBurnsZoom 9s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
+@keyframes kenBurnsZoom {
+    from { background-size: 114% auto; }
+    to   { background-size: 100% auto; }
+}
+
+/* ---------- Movie cards: lift + a single quick projector-flicker on hover ---------- */
+
+.movie-card-interactive:hover {
+    box-shadow: 0 22px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--accent-bright-dim);
+    animation: frameFlicker 0.5s steps(2, end);
+}
+
+@keyframes frameFlicker {
+    0%, 100% { filter: brightness(1); }
+    50%      { filter: brightness(1.06); }
+}
+
+/* ---------- Buttons: marquee bulbs pulsing on hover ---------- */
+
+.btn-warning-custom:hover {
+    animation: marqueeGlow 1.6s ease-in-out infinite;
+}
+
+@keyframes marqueeGlow {
+    0%, 100% { box-shadow: 0 0 0 1px var(--accent-bright-dim), 0 8px 24px rgba(201, 150, 46, 0.18); }
+    50%      { box-shadow: 0 0 0 1px var(--accent-bright), 0 8px 30px rgba(201, 150, 46, 0.35), 0 0 18px rgba(201, 150, 46, 0.25); }
+}
+
+/* ---------- Search suggestions: drop in instead of appearing instantly ---------- */
+
+#search-suggestions-box:not(.d-none) {
+    animation: suggestDrop 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes suggestDrop {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- SIGNATURE: modal opens like a projector iris ---------- */
+
+#movieDetailsModal .modal-dialog {
+    transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: scale(0.85);
+}
+#movieDetailsModal.show .modal-dialog {
+    transform: scale(1);
+}
+
+#movieDetailsModal .modal-content {
+    clip-path: circle(0% at 50% 50%);
+    transition: clip-path 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#movieDetailsModal.show .modal-content {
+    clip-path: circle(150% at 50% 50%);
+}
+
+/* ---------- Custom loader: a spinning film reel instead of a generic spinner ---------- */
+
+.film-reel-loader {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background:
+        radial-gradient(circle 4px at 50% 8%,  var(--accent-bright) 99%, transparent 100%),
+        radial-gradient(circle 4px at 85% 27%, var(--accent-bright) 99%, transparent 100%),
+        radial-gradient(circle 4px at 85% 73%, var(--accent-bright) 99%, transparent 100%),
+        radial-gradient(circle 4px at 50% 92%, var(--accent-bright) 99%, transparent 100%),
+        radial-gradient(circle 4px at 15% 73%, var(--accent-bright) 99%, transparent 100%),
+        radial-gradient(circle 4px at 15% 27%, var(--accent-bright) 99%, transparent 100%);
+    animation: reelSpin 1s linear infinite;
+}
+
+@keyframes reelSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* ===========================================================================
+   CINEMATIC MOTION SYSTEM — PART 2 (bigger, bolder)
+=========================================================================== */
+
+/* ---------- Scroll progress bar: a strip of film unwinding across the top ---------- */
+#scroll-progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent-bright), #F2EBDA);
+    box-shadow: 0 0 10px rgba(201, 150, 46, 0.65);
+    z-index: 10000;
+    transition: width 0.1s linear;
+}
+
+/* ---------- Hero: letter-by-letter title reveal (like an opening credit) ---------- */
+.hero-headline .letter {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(34px) rotateX(-50deg);
+    animation: letterRise 0.65s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+@keyframes letterRise {
+    to { opacity: 1; transform: translateY(0) rotateX(0); }
+}
+
+/* ---------- Hero: cursor-follow spotlight, like a torch through the theater ---------- */
+.hero-spotlight {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(circle 240px at var(--spot-x, 50%) var(--spot-y, 40%), rgba(201, 150, 46, 0.18), transparent 70%);
+}
+
+/* ---------- Hero: parallax poster stack ---------- */
+.poster-parallax-layer {
+    transition: transform 0.15s ease-out;
+}
+
+/* ---------- 3D tilt for mood cards + movie cards, driven by JS mousemove ---------- */
+.mood-card,
+.movie-card-interactive {
+    transition: transform 0.25s ease-out, box-shadow 0.25s ease;
+    will-change: transform;
+}
+
+/* ---------- Mood icon wiggle on hover ---------- */
+.mood-card:hover .mood-icon {
+    animation: iconWiggle 0.5s ease;
+}
+@keyframes iconWiggle {
+    0%, 100% { transform: rotate(0) scale(1.08); }
+    25%      { transform: rotate(-10deg) scale(1.12); }
+    75%      { transform: rotate(10deg) scale(1.12); }
+}
+
+/* ---------- Active mood card: breathing glow ---------- */
+.mood-card.active-mood {
+    animation: activeGlowPulse 1.8s ease-in-out infinite;
+}
+@keyframes activeGlowPulse {
+    0%, 100% { box-shadow: inset 0 0 0 1px var(--accent-bright), 0 0 0 rgba(201, 150, 46, 0); }
+    50%      { box-shadow: inset 0 0 0 1px var(--accent-bright), 0 0 24px rgba(201, 150, 46, 0.4); }
+}
+
+/* ---------- Movie posters: glossy light-sweep on hover ---------- */
+.img-hover-container {
+    position: relative;
+}
+.img-hover-container::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -160%;
+    width: 55%;
+    height: 100%;
+    background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.22) 50%, transparent 100%);
+    transform: skewX(-20deg);
+    transition: left 0.7s ease;
+    pointer-events: none;
+    z-index: 2;
+}
+.movie-card-interactive:hover .img-hover-container::after {
+    left: 160%;
+}
+
+/* ---------- Scroll reveal: alternating tilt so items don't march in uniformly ---------- */
+.reveal-on-scroll {
+    transform: translateY(26px) scale(0.98) rotate(var(--tilt, 0deg));
+}
+.reveal-on-scroll.is-visible {
+    transform: translateY(0) scale(1) rotate(0deg) !important;
+}
+
+/* ---------- Button ripple ---------- */
+.btn-ripple-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: 6px;
+    pointer-events: none;
+}
+.btn-ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.45);
+    transform: scale(0);
+    animation: rippleExpand 0.6s ease-out forwards;
+}
+@keyframes rippleExpand {
+    to { transform: scale(1); opacity: 0; }
+}
+
+/* ---------- Marquee chase-light bulbs along the bottom of a CTA ---------- */
+.marquee-lights {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 5px;
+    height: 3px;
+    border-radius: 2px;
+    background-image: repeating-linear-gradient(90deg, var(--accent-bright) 0 6px, transparent 6px 14px);
+    background-size: 28px 100%;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    animation: marqueeChase 0.6s linear infinite;
+    pointer-events: none;
+}
+.btn-warning-custom:hover .marquee-lights {
+    opacity: 1;
+}
+@keyframes marqueeChase {
+    to { background-position: 28px 0; }
+}
+
+/* ---------- Star rating sparkle burst ---------- */
+#user-star-rating-container {
+    position: relative;
+}
+.star-sparkle {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    left: 50%;
+    top: 50%;
+    border-radius: 50%;
+    background: var(--accent-bright);
+    animation: sparkleFly 0.65s ease-out forwards;
+    pointer-events: none;
+}
+@keyframes sparkleFly {
+    to { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+
+/* ---------- Modal: content lines rise in staggered after the iris opens ---------- */
+#movieDetailsModal.show #modal-content-target > * {
+    animation: contentRise 0.55s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+#movieDetailsModal.show #modal-content-target > *:nth-child(1) { animation-delay: 0.2s; }
+#movieDetailsModal.show #modal-content-target > *:nth-child(2) { animation-delay: 0.32s; }
+@keyframes contentRise {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===========================================================================
+   FUN LAYER — toasts, confetti, slot-machine spin, star mood labels, easter egg
+=========================================================================== */
+
+/* ---------- Toast notifications (replaces alert()) ---------- */
+#toast-stack {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 11000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.movietem-toast {
+    background: var(--surface-raised);
+    border: 1px solid var(--accent-bright-dim);
+    color: var(--text-primary);
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 320px;
+    animation: toastIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    pointer-events: auto;
+}
+.movietem-toast.toast-leaving { animation: toastOut 0.35s ease forwards; }
+.movietem-toast.toast-error   { border-color: var(--error); }
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(40px) scale(0.9); }
+    to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes toastOut {
+    to { opacity: 0; transform: translateX(40px) scale(0.9); }
+}
+
+/* ---------- Confetti ---------- */
+.confetti-piece {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 12000;
+    animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+    0%   { transform: translate(var(--x0), var(--y0)) rotate(0deg); opacity: 1; }
+    100% { transform: translate(var(--x1), var(--y1)) rotate(var(--spin)); opacity: 0; }
+}
+
+/* ---------- Slot-machine spin highlight for "Surprise Me" ---------- */
+.mood-card.slot-cycling {
+    border-color: var(--accent-bright);
+    box-shadow: inset 0 0 0 1px var(--accent-bright), 0 0 18px rgba(201, 150, 46, 0.35);
+    transition: none;
+}
+
+/* ---------- Idle bob on mood icons — life even without hovering ---------- */
+.mood-icon { animation: idleBob 3.2s ease-in-out infinite; }
+.mood-card:nth-child(2n) .mood-icon { animation-delay: 0.4s; }
+.mood-card:nth-child(3n) .mood-icon { animation-delay: 0.8s; }
+.mood-card:nth-child(5n) .mood-icon { animation-delay: 1.2s; }
+@keyframes idleBob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-4px); }
+}
+
+/* ---------- Star rating floating mood label ---------- */
+.star-mood-label {
+    position: absolute;
+    top: -34px;
+    left: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent-bright);
+    background: rgba(8, 5, 3, 0.9);
+    border: 1px solid var(--accent-bright-dim);
+    padding: 3px 10px;
+    border-radius: 6px;
+    opacity: 0;
+    transform: translateY(6px) scale(0.9);
+    transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+    white-space: nowrap;
+}
+.star-mood-label.is-active { opacity: 1; transform: translateY(0) scale(1); }
+
+/* ---------- Shake feedback for blocked actions ---------- */
+@keyframes shakeNo {
+    10%, 90%      { transform: translateX(-1px); }
+    20%, 80%      { transform: translateX(2px); }
+    30%, 50%, 70% { transform: translateX(-4px); }
+    40%, 60%      { transform: translateX(4px); }
+}
+.shake-error { animation: shakeNo 0.5s ease; }
+
+/* ---------- Respect reduced motion across the whole motion + fun system ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .reveal-on-scroll,
+    .hero-iris-reveal,
+    .projector-beam,
+    .carousel-item.active,
+    .movie-card-interactive:hover,
+    .btn-warning-custom:hover,
+    .star-select-btn,
+    #search-suggestions-box:not(.d-none),
+    #movieDetailsModal .modal-dialog,
+    #movieDetailsModal .modal-content,
+    .film-reel-loader,
+    .hero-headline .letter,
+    .hero-spotlight,
+    .poster-parallax-layer,
+    .mood-card, .movie-card-interactive,
+    .img-hover-container::after,
+    .btn-ripple, .marquee-lights,
+    .star-sparkle,
+    #movieDetailsModal.show #modal-content-target > *,
+    .movietem-toast, .confetti-piece, .mood-icon, .star-mood-label,
+    .shake-error, .mood-card.slot-cycling {
+        animation: none !important;
+        transition: none !important;
+        filter: none !important;
+        clip-path: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
 }

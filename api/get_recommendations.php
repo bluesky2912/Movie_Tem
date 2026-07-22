@@ -63,9 +63,13 @@ try {
     $excludeIds = array_map('intval', array_column($excludeStmt->fetchAll(), 'tmdb_movie_id'));
 
     // Pull each top genre separately and interleave results, so one dominant
-    // genre in your ratings doesn't flood every recommendation slot.
+    // genre in your ratings doesn't flood every recommendation slot. Small
+    // delay between calls avoids bursting several TMDB requests at once.
     $perGenreResults = [];
-    foreach ($topGenreIds as $genreId) {
+    foreach ($topGenreIds as $i => $genreId) {
+        if ($i > 0) {
+            usleep(150000); // 0.15s between genre calls
+        }
         $response = $tmdb->getMoviesByGenres([$genreId]);
         $candidates = $response['results'] ?? [];
         $filtered = array_values(array_filter($candidates, function ($movie) use ($excludeIds) {

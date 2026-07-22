@@ -14,16 +14,23 @@ $trendingMovies = isset($trendingResponse['results']) ? array_slice($trendingRes
 include 'includes/header.php';
 ?>
 
+<div id="scroll-progress-bar"></div>
+
 <main class="container my-4" style="min-height: 85vh;">
 
     <!-- Upgraded Hero Banner Section with Live Search and Dynamic Poster Stack Layout -->
-    <div class="p-5 rounded-4 mb-5 border border-secondary border-opacity-10 position-relative overflow-hidden" style="background: linear-gradient(135deg, #150f0a 0%, #0d0905 100%);">
-        
+    <div id="hero-banner" class="p-5 rounded-4 mb-5 border border-secondary border-opacity-10 position-relative overflow-hidden" style="background: linear-gradient(135deg, #150f0a 0%, #0d0905 100%);">
+
+        <!-- Projector beam: sweeps across the hero once on load -->
+        <div class="projector-beam"></div>
+        <!-- Cursor-follow spotlight -->
+        <div class="hero-spotlight"></div>
+
         <div class="row align-items-center g-4">
             <!-- Left Side: Header Copy & Global Search Bar Elements -->
-            <div class="col-md-7 position-relative" style="z-index: 2;">
+            <div class="col-md-7 position-relative hero-iris-reveal" style="z-index: 2;">
                 <span class="text-warning-custom text-uppercase font-monospace small tracking-wider d-block mb-2" style="font-size: 0.75rem;">MovieTem — Cinema, Sorted by Feeling</span>
-                <h1 class="display-4 text-white fw-bold mb-3" style="font-family: 'Fraunces', serif; font-style: italic; letter-spacing: -1px;">
+                <h1 class="hero-headline display-4 text-white fw-bold mb-3" style="font-family: 'Fraunces', serif; font-style: italic; letter-spacing: -1px;">
                     Find the perfect movie for every mood.
                 </h1>
                 <p class="text-white-50 mb-4" style="font-size: 1.05rem; line-height: 1.6; opacity: 0.85;">
@@ -58,25 +65,25 @@ include 'includes/header.php';
             <!-- Right Side: Layered Poster Display Asset -->
             <div class="col-md-5 d-none d-md-flex justify-content-center align-items-center position-relative py-2">
                 <div class="position-absolute rounded-circle" style="width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,193,7,0.12) 0%, rgba(0,0,0,0) 70%); filter: blur(25px); z-index: 1;"></div>
-                
+
                 <div class="poster-stack position-relative" style="width: 220px; height: 300px; z-index: 2;">
-                    <?php 
+                    <?php
                     $poster1 = isset($trendingMovies[0]['poster_path']) ? "https://image.tmdb.org/t/p/w500" . $trendingMovies[0]['poster_path'] : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500';
                     $poster2 = isset($trendingMovies[1]['poster_path']) ? "https://image.tmdb.org/t/p/w500" . $trendingMovies[1]['poster_path'] : 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500';
                     $poster3 = isset($trendingMovies[2]['poster_path']) ? "https://image.tmdb.org/t/p/w500" . $trendingMovies[2]['poster_path'] : 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=500';
                     ?>
 
-                    <div class="position-absolute rounded shadow-lg overflow-hidden" 
+                    <div class="position-absolute rounded shadow-lg overflow-hidden poster-parallax-layer" data-depth="1.6" data-base-transform="rotate(-10deg)"
                          style="width: 150px; height: 215px; top: 15px; left: -35px; transform: rotate(-10deg); opacity: 0.45; border: 1px solid rgba(255,255,255,0.08);">
                         <img src="<?php echo $poster2; ?>" alt="Cinema Art" class="w-100 h-100 object-fit-cover">
                     </div>
 
-                    <div class="position-absolute rounded shadow-lg overflow-hidden" 
+                    <div class="position-absolute rounded shadow-lg overflow-hidden poster-parallax-layer" data-depth="1.6" data-base-transform="rotate(12deg)"
                          style="width: 150px; height: 215px; top: 25px; right: -35px; transform: rotate(12deg); opacity: 0.45; border: 1px solid rgba(255,255,255,0.08);">
                         <img src="<?php echo $poster3; ?>" alt="Cinema Art" class="w-100 h-100 object-fit-cover">
                     </div>
 
-                    <div class="position-absolute rounded" 
+                    <div class="position-absolute rounded poster-parallax-layer" data-depth="0.7" data-base-transform=""
                          style="width: 190px; height: 275px; top: -5px; left: 15px; z-index: 3; overflow: hidden; border: 1px solid rgba(255, 193, 7, 0.25); box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 25px rgba(255,193,7,0.08);">
                         <img src="<?php echo $poster1; ?>" alt="Featured Poster Collection" class="w-100 h-100 object-fit-cover">
                         <div class="position-absolute w-100 h-100 top-0 start-0" style="background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 60%);"></div>
@@ -217,6 +224,7 @@ include 'includes/header.php';
         <div class="text-center mt-4">
             <button id="random-mood-btn" type="button" class="btn btn-warning-custom fw-semibold px-4 py-2 rounded-3">
                 🎲 Surprise Me!
+                <span class="marquee-lights"></span>
             </button>
         </div>
     </div>

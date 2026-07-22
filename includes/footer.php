@@ -9,7 +9,7 @@
 
             <div class="modal-body position-relative z-1 pt-0">
                 <div id="modal-loading-spinner" class="text-center py-5">
-                    <div class="spinner-border text-warning" role="status"></div>
+                    <div class="film-reel-loader"></div>
                 </div>
 
                 <div id="modal-content-target" class="row d-none">
@@ -46,7 +46,7 @@
                         <div id="review-status-msg" class="mt-2"></div>
                     </div>
                 </div>
-            </div>
+            </div> 
         </div>
     </div>
 </div>

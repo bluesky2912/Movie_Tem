@@ -6,4 +6,4 @@ class Database {
     private $username = "YOUR_USERNAME";
     private $password = "YOUR_PASSWORD";
     // ... your PDO connection logic ...
-}
+}git push -u origin main

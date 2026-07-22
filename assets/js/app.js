@@ -16,6 +16,34 @@ function renderSkeletons(container, count = 4) {
     `).join('');
 }
 
+/* ============================================================================
+   Scroll Reveal Engine
+   Adds the .reveal-on-scroll class (focus-pull effect defined in styles.css)
+   to any matched elements, staggers their transition delay, and fades/sharpens
+   them in via IntersectionObserver as they enter the viewport. Safe to call
+   repeatedly — e.g. after dynamically injecting fresh movie cards — since
+   elements that already have the class are just re-observed, not re-tagged.
+============================================================================ */
+const scrollRevealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            scrollRevealObserver.unobserve(entry.target);
+        }
+    });
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+function initScrollReveal(selector, container = document) {
+    container.querySelectorAll(selector).forEach((el, i) => {
+        if (!el.classList.contains('reveal-on-scroll')) {
+            el.classList.add('reveal-on-scroll');
+            el.style.transitionDelay = `${Math.min(i * 60, 360)}ms`;
+            el.style.setProperty('--tilt', i % 2 === 0 ? '-1.5deg' : '1.5deg');
+        }
+        scrollRevealObserver.observe(el);
+    });
+}
+
 function movieCardHtml(movie) {
     const poster = movie.poster_path
         ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
@@ -50,6 +78,205 @@ function movieCardHtml(movie) {
                 </div>
             </div>
         </div>`;
+}
+
+/* ============================================================================
+   Scroll progress bar — a strip of film unwinding across the top
+============================================================================ */
+function updateScrollProgress() {
+    const bar = document.getElementById('scroll-progress-bar');
+    if (!bar) return;
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+    bar.style.width = `${pct}%`;
+}
+window.addEventListener('scroll', updateScrollProgress, { passive: true });
+
+/* ============================================================================
+   Hero: letter-by-letter title reveal, cursor-follow spotlight, parallax posters
+============================================================================ */
+function splitLettersForReveal(el) {
+    if (!el || el.dataset.split === 'true') return;
+    const text = el.textContent;
+    el.textContent = '';
+    let delay = 0;
+    [...text].forEach(ch => {
+        const span = document.createElement('span');
+        span.className = 'letter';
+        span.textContent = ch === ' ' ? '\u00A0' : ch;
+        span.style.animationDelay = `${delay}ms`;
+        delay += 22;
+        el.appendChild(span);
+    });
+    el.dataset.split = 'true';
+}
+
+function initHeroMotion() {
+    const heroBanner = document.getElementById('hero-banner');
+    if (!heroBanner) return;
+
+    splitLettersForReveal(heroBanner.querySelector('.hero-headline'));
+
+    const spotlight = heroBanner.querySelector('.hero-spotlight');
+    const posterLayers = heroBanner.querySelectorAll('.poster-parallax-layer');
+
+    heroBanner.addEventListener('mousemove', (e) => {
+        const rect = heroBanner.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+        if (spotlight) {
+            spotlight.style.setProperty('--spot-x', `${x}%`);
+            spotlight.style.setProperty('--spot-y', `${y}%`);
+        }
+
+        posterLayers.forEach(layer => {
+            const depth = parseFloat(layer.dataset.depth || '1');
+            const base = layer.dataset.baseTransform || '';
+            const moveX = (x - 50) * depth * 0.25;
+            const moveY = (y - 50) * depth * 0.25;
+            layer.style.transform = `translate(${moveX}px, ${moveY}px) ${base}`;
+        });
+    });
+
+    heroBanner.addEventListener('mouseleave', () => {
+        posterLayers.forEach(layer => {
+            layer.style.transform = layer.dataset.baseTransform || '';
+        });
+    });
+}
+
+/* ============================================================================
+   3D tilt for mood cards + movie cards — delegated so it works on cards
+   injected later by fetch() calls too
+============================================================================ */
+function applyTilt(el, e) {
+    const rect = el.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width;
+    const py = (e.clientY - rect.top) / rect.height;
+    const rotateY = (px - 0.5) * 14;
+    const rotateX = (0.5 - py) * 14;
+    el.style.transform = `perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+}
+
+document.addEventListener('mousemove', (e) => {
+    const tiltEl = e.target.closest('.mood-card, .movie-card-interactive');
+    if (tiltEl) applyTilt(tiltEl, e);
+});
+
+// mouseleave doesn't bubble, so listen in the capture phase on the document
+document.addEventListener('mouseleave', (e) => {
+    const tiltEl = e.target.closest && e.target.closest('.mood-card, .movie-card-interactive');
+    if (tiltEl) tiltEl.style.transform = '';
+}, true);
+
+/* ============================================================================
+   Ripple effect on primary buttons
+============================================================================ */
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-warning-custom');
+    if (!btn) return;
+
+    let layer = btn.querySelector('.btn-ripple-layer');
+    if (!layer) {
+        layer = document.createElement('span');
+        layer.className = 'btn-ripple-layer';
+        btn.insertBefore(layer, btn.firstChild);
+    }
+
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height) * 1.4;
+    const ripple = document.createElement('span');
+    ripple.className = 'btn-ripple';
+    ripple.style.width = ripple.style.height = `${size}px`;
+    ripple.style.left = `${e.clientX - rect.left - size / 2}px`;
+    ripple.style.top = `${e.clientY - rect.top - size / 2}px`;
+    layer.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 650);
+});
+
+/* ============================================================================
+   Star rating sparkle burst — fires when the user picks 5 stars
+============================================================================ */
+function spawnSparkles(container) {
+    if (!container) return;
+    for (let i = 0; i < 8; i++) {
+        const spark = document.createElement('span');
+        spark.className = 'star-sparkle';
+        const angle = (Math.PI * 2 * i) / 8;
+        spark.style.setProperty('--dx', `${Math.cos(angle) * 32}px`);
+        spark.style.setProperty('--dy', `${Math.sin(angle) * 32}px`);
+        container.appendChild(spark);
+        setTimeout(() => spark.remove(), 700);
+    }
+}
+
+/* ============================================================================
+   Toast notifications — replaces jarring alert() calls
+============================================================================ */
+function getToastStack() {
+    let stack = document.getElementById('toast-stack');
+    if (!stack) {
+        stack = document.createElement('div');
+        stack.id = 'toast-stack';
+        document.body.appendChild(stack);
+    }
+    return stack;
+}
+
+function showToast(message, type = 'info', icon = null) {
+    const stack = getToastStack();
+    const toast = document.createElement('div');
+    toast.className = `movietem-toast ${type === 'error' ? 'toast-error' : ''}`;
+    toast.innerHTML = `<span>${icon || (type === 'error' ? '⚠️' : '🎬')}</span><span>${escapeHtml(message)}</span>`;
+    stack.appendChild(toast);
+    setTimeout(() => {
+        toast.classList.add('toast-leaving');
+        setTimeout(() => toast.remove(), 350);
+    }, 3200);
+}
+
+/* ============================================================================
+   Confetti burst
+============================================================================ */
+function fireConfetti(originX = window.innerWidth / 2, originY = window.innerHeight / 2, count = 26) {
+    const colors = ['#C9962E', '#F2EBDA', '#6AAE7F', '#E1DCC9'];
+    for (let i = 0; i < count; i++) {
+        const piece = document.createElement('span');
+        piece.className = 'confetti-piece';
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 60 + Math.random() * 140;
+        const x1 = Math.cos(angle) * distance;
+        const y1 = Math.sin(angle) * distance - 40;
+        piece.style.setProperty('--x0', `${originX}px`);
+        piece.style.setProperty('--y0', `${originY}px`);
+        piece.style.setProperty('--x1', `${originX + x1}px`);
+        piece.style.setProperty('--y1', `${originY + y1 + 200}px`);
+        piece.style.setProperty('--spin', `${360 + Math.random() * 360}deg`);
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.animationDuration = `${0.9 + Math.random() * 0.6}s`;
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 1600);
+    }
+}
+
+/* ============================================================================
+   Slot-machine spin for "Surprise Me"
+============================================================================ */
+function slotMachineReveal(moodCardsArr, onDone) {
+    let ticks = 0;
+    const maxTicks = 14;
+    const interval = setInterval(() => {
+        moodCardsArr.forEach(c => c.classList.remove('slot-cycling'));
+        moodCardsArr[Math.floor(Math.random() * moodCardsArr.length)].classList.add('slot-cycling');
+        ticks++;
+        if (ticks >= maxTicks) {
+            clearInterval(interval);
+            moodCardsArr.forEach(c => c.classList.remove('slot-cycling'));
+            onDone();
+        }
+    }, 70);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -91,13 +318,20 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(`api/get_movies_by_mood.php?mood=${encodeURIComponent(selectedMood)}`)
             .then(res => res.json())
             .then(data => {
-                if (data.error || !data.length) {
+                if (data && data.error) {
+                    console.error('TMDB error (mood):', data.error);
+                    grid.innerHTML = `<div class="col-12 text-center text-danger py-4">Couldn't reach the movie database: ${escapeHtml(data.error)}</div>`;
+                    return;
+                }
+                if (!data || !data.length) {
                     grid.innerHTML = `<div class="col-12 text-center text-muted py-4">No movies matched this mood tonight. Try another one.</div>`;
                     return;
                 }
                 grid.innerHTML = data.slice(0, 8).map(movieCardHtml).join('');
+                initScrollReveal('.movie-card-interactive', grid);
             })
-            .catch(() => {
+            .catch((err) => {
+                console.error('Network error (mood):', err);
                 grid.innerHTML = `<div class="col-12 text-center text-danger py-4">Something went wrong fetching movies. Please try again.</div>`;
             });
     }
@@ -134,13 +368,20 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(`api/get_movies_by_mood.php?action=search&query=${encodeURIComponent(query)}`)
             .then(res => res.json())
             .then(data => {
+                if (data && data.error) {
+                    console.error('TMDB error (search):', data.error);
+                    grid.innerHTML = `<div class="col-12 text-center text-danger py-4">Couldn't reach the movie database: ${escapeHtml(data.error)}</div>`;
+                    return;
+                }
                 if (!data || !data.length) {
                     grid.innerHTML = `<div class="col-12 text-center text-muted py-4">No movies found matching "${safeQuery}". Check your spelling or try another title!</div>`;
                     return;
                 }
                 grid.innerHTML = data.slice(0, 8).map(movieCardHtml).join('');
+                initScrollReveal('.movie-card-interactive', grid);
             })
-            .catch(() => {
+            .catch((err) => {
+                console.error('Network error (search):', err);
                 grid.innerHTML = `<div class="col-12 text-center text-danger py-4">Something went wrong processing your search query. Please try again.</div>`;
             });
     }
@@ -220,8 +461,30 @@ document.addEventListener('DOMContentLoaded', () => {
         randomMoodBtn.addEventListener('click', (e) => {
             e.preventDefault();
             if (moodCards.length === 0) return;
-            const randomCard = moodCards[Math.floor(Math.random() * moodCards.length)];
-            randomCard.click();
+            randomMoodBtn.disabled = true;
+            slotMachineReveal(Array.from(moodCards), () => {
+                randomMoodBtn.disabled = false;
+                const randomCard = moodCards[Math.floor(Math.random() * moodCards.length)];
+                randomCard.click();
+            });
+        });
+    }
+
+    // Hidden easter egg — click the logo 5 times in quick succession
+    let logoClickCount = 0;
+    let logoClickTimer = null;
+    const logo = document.querySelector('.navbar-brand');
+    if (logo) {
+        logo.addEventListener('click', (e) => {
+            logoClickCount++;
+            clearTimeout(logoClickTimer);
+            logoClickTimer = setTimeout(() => { logoClickCount = 0; }, 1500);
+            if (logoClickCount >= 5) {
+                e.preventDefault();
+                logoClickCount = 0;
+                fireConfetti(window.innerWidth / 2, window.innerHeight / 3, 60);
+                showToast("You found the director's cut!", 'info', '🎬');
+            }
         });
     }
 
@@ -238,6 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(data => {
                     if (data.status === 'success' && data.movies && data.movies.length > 0) {
                         forYouGrid.innerHTML = data.movies.map(movieCardHtml).join('');
+                        initScrollReveal('.movie-card-interactive', forYouGrid);
                     } else {
                         forYouSection.classList.add('d-none');
                         if (data.status === 'not_enough_data' && forYouEmpty) {
@@ -251,6 +515,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
         }
     }
+
+    // Reveal static, always-on-page sections as the user scrolls to them
+    // (alternating left/right tilt is applied automatically by initScrollReveal)
+    initScrollReveal('.mood-card');
+    initScrollReveal('#how-it-works-section .col');
+    initScrollReveal('#mood-selector-anchor, #how-it-works-section .text-center.mb-5');
+
+    initHeroMotion();
 });
 
 /* ============================================================================
@@ -264,8 +536,10 @@ document.addEventListener('click', function (e) {
         e.stopPropagation();
 
         if (!isLoggedIn) {
-            alert('Please sign in to save movies to your watchlist.');
-            window.location.href = 'login.php';
+            toggleBtn.classList.add('shake-error');
+            setTimeout(() => toggleBtn.classList.remove('shake-error'), 500);
+            showToast('Sign in to save movies to your watchlist.', 'error');
+            setTimeout(() => { window.location.href = 'login.php'; }, 900);
             return;
         }
 
@@ -287,9 +561,11 @@ document.addEventListener('click', function (e) {
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'error') {
-                    alert(data.message || 'Please sign in to save movies to your watchlist.');
+                    toggleBtn.classList.add('shake-error');
+                    setTimeout(() => toggleBtn.classList.remove('shake-error'), 500);
+                    showToast(data.message || 'Please sign in to save movies to your watchlist.', 'error');
                     if (data.message && data.message.toLowerCase().includes('session')) {
-                        window.location.href = 'login.php';
+                        setTimeout(() => { window.location.href = 'login.php'; }, 900);
                     }
                     return;
                 }
@@ -297,9 +573,13 @@ document.addEventListener('click', function (e) {
                 if (data.status === 'added') {
                     toggleBtn.classList.add('active-saved');
                     toggleBtn.innerHTML = '<i class="bi bi-bookmark-check-fill"></i>';
+                    const rect = toggleBtn.getBoundingClientRect();
+                    fireConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2, 18);
+                    showToast('Added to your watchlist!', 'info', '🍿');
                 } else if (data.status === 'removed') {
                     toggleBtn.classList.remove('active-saved');
                     toggleBtn.innerHTML = '<i class="bi bi-bookmark"></i>';
+                    showToast('Removed from your watchlist.', 'info', '📤');
 
                     const watchlistCard = document.getElementById(`watchlist-item-${movieId}`);
                     if (watchlistCard) {
@@ -317,7 +597,7 @@ document.addEventListener('click', function (e) {
             })
             .catch(err => {
                 console.error(err);
-                alert('Error communicating with the watchlist service.');
+                showToast('Error communicating with the watchlist service.', 'error');
             });
         return;
     }
@@ -331,7 +611,11 @@ document.addEventListener('click', function (e) {
 
         const bsModal = new bootstrap.Modal(modalEl);
         bsModal.show();
-        document.getElementById('modal-loading-spinner')?.classList.remove('d-none');
+        const spinnerEl = document.getElementById('modal-loading-spinner');
+        if (spinnerEl) {
+            spinnerEl.innerHTML = '<div class="film-reel-loader"></div>';
+            spinnerEl.classList.remove('d-none');
+        }
         document.getElementById('modal-content-target')?.classList.add('d-none');
 
         // Bind the current movie ID onto the rating module context, and reset UI
@@ -423,13 +707,17 @@ document.addEventListener('click', function (e) {
                 }
             })
             .catch(err => {
-                console.error('Could not load movie details:', err);
-                document.getElementById('modal-loading-spinner')?.classList.add('d-none');
-                const contentTarget = document.getElementById('modal-content-target');
-                if (contentTarget) {
-                    contentTarget.classList.remove('d-none');
-                    contentTarget.innerHTML = '<div class="col-12 text-center text-danger py-4">Could not load details for this movie.</div>';
+                console.error('Could not load movie details:', err.message);
+                const spinner = document.getElementById('modal-loading-spinner');
+                if (spinner) {
+                    spinner.innerHTML = `<div class="text-danger small px-3">Could not load details: ${escapeHtml(err.message)}</div>`;
+                    spinner.classList.remove('d-none');
                 }
+                // Deliberately leave #modal-content-target hidden rather than
+                // overwriting its innerHTML — it holds the star rating and
+                // review fields that need to survive for the next successful
+                // open of this modal.
+                document.getElementById('modal-content-target')?.classList.add('d-none');
             });
     }
 });
@@ -448,6 +736,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const allStars = starContainer.querySelectorAll('.star-select-btn');
 
+    const moodLabels = ['', 'Meh', 'Good', 'Great', 'Amazing', 'Perfect!'];
+    const starLabel = document.createElement('span');
+    starLabel.className = 'star-mood-label';
+    starContainer.appendChild(starLabel);
+
+    function updateMoodLabel(value) {
+        if (value > 0) {
+            starLabel.textContent = moodLabels[value];
+            starLabel.classList.add('is-active');
+        } else {
+            starLabel.classList.remove('is-active');
+        }
+    }
+
     function paintStars(ratingCount) {
         allStars.forEach(star => {
             const currentStarValue = parseInt(star.getAttribute('data-value'));
@@ -465,10 +767,12 @@ document.addEventListener('DOMContentLoaded', () => {
         star.addEventListener('mouseenter', (e) => {
             const hoveredValue = parseInt(e.target.getAttribute('data-value'));
             paintStars(hoveredValue);
+            updateMoodLabel(hoveredValue);
         });
 
         star.addEventListener('mouseleave', () => {
             paintStars(window.chosenRatingValue);
+            updateMoodLabel(window.chosenRatingValue);
         });
 
         star.addEventListener('click', (e) => {
@@ -479,6 +783,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             window.chosenRatingValue = parseInt(e.target.getAttribute('data-value'));
             paintStars(window.chosenRatingValue);
+            updateMoodLabel(window.chosenRatingValue);
+            if (window.chosenRatingValue === 5) {
+                spawnSparkles(starContainer);
+            }
         });
     });
 
@@ -524,6 +832,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.status === 'success') {
                 statusTextFeedback.className = "small text-success font-monospace";
                 statusTextFeedback.innerText = "Saved successfully!";
+                const rect = submitBtn.getBoundingClientRect();
+                fireConfetti(rect.left + rect.width / 2, rect.top, 22);
                 setTimeout(() => { statusTextFeedback.innerText = ''; }, 3000);
             } else {
                 statusTextFeedback.className = "small text-danger font-monospace";

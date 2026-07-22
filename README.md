@@ -4,12 +4,12 @@
 
 MovieTem is a mood-based movie discovery platform. Instead of scrolling through endless grids of titles, pick how you feel — happy, mind-bending, chill, nostalgic — and get matched with something worth watching tonight. Rate what you watch, and MovieTem learns your taste to recommend more of it.
 
-<!-- 
+
   Add 2-3 screenshots here once your site is running. Example:
-  ![Homepage](screenshots/homepage.png)
+  ![Homepage](screenshots/homepage.png)im
   ![Movie Modal](screenshots/modal.png)
   ![Picked For You](screenshots/for-you.png)
--->
+
 
 ---
 
@@ -123,6 +123,5 @@ This product uses the TMDB API but is not endorsed or certified by TMDB.
 
 <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB Logo" width="150">
 
-## 📄 License
 
 This project was built as a college project and is available for educational reference.

@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
-
+                                              
 $userId = $_SESSION['user_id'];
 $dbClass = new Database();
 $db = $dbClass->getConnection();
