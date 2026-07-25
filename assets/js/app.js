@@ -17,6 +17,206 @@ function renderSkeletons(container, count = 4) {
 }
 
 /* ============================================================================
+   Streaming provider search URLs
+   TMDB's free API only gives one generic aggregator link, not a true
+   per-title deep link into each provider (that's a paid JustWatch affiliate
+   feature). This sends the click to the *actual* provider's own site,
+   pre-searched for the title, instead of routing through TMDB. Keyed on the
+   lowercased provider_name TMDB returns; unmatched providers fall back to
+   the TMDB regional link, then to a plain Google search as a last resort.
+============================================================================ */
+const PROVIDER_SEARCH_URLS = {
+    'netflix':                  (q) => `https://www.netflix.com/search?q=${q}`,
+    'amazon prime video':       (q) => `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${q}`,
+    'amazon video':             (q) => `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${q}`,
+    'disney plus':              (q) => `https://www.disneyplus.com/search?q=${q}`,
+    'disney+':                  (q) => `https://www.disneyplus.com/search?q=${q}`,
+    'disney+ hotstar':          (q) => `https://www.hotstar.com/in/search?q=${q}`,
+    'hotstar':                  (q) => `https://www.hotstar.com/in/search?q=${q}`,
+    'apple tv':                 (q) => `https://tv.apple.com/search?term=${q}`,
+    'apple tv plus':            (q) => `https://tv.apple.com/search?term=${q}`,
+    'apple itunes':             (q) => `https://tv.apple.com/search?term=${q}`,
+    'hulu':                     (q) => `https://www.hulu.com/search?q=${q}`,
+    'hbo max':                  (q) => `https://play.max.com/search?q=${q}`,
+    'max':                      (q) => `https://play.max.com/search?q=${q}`,
+    'paramount plus':           (q) => `https://www.paramountplus.com/search/?query=${q}`,
+    'peacock':                  (q) => `https://www.peacocktv.com/search?q=${q}`,
+    'youtube':                  (q) => `https://www.youtube.com/results?search_query=${q}`,
+    'google play movies':       (q) => `https://play.google.com/store/search?q=${q}&c=movies`,
+    'jiocinema':                (q) => `https://www.jiocinema.com/search/${q}`,
+    'sonyliv':                  (q) => `https://www.sonyliv.com/search?q=${q}`,
+    'zee5':                     (q) => `https://www.zee5.com/search?q=${q}`,
+    'mubi':                     (q) => `https://mubi.com/search/films?query=${q}`,
+};
+
+function buildProviderUrl(providerName, movieTitle, fallbackWatchLink) {
+    const key = (providerName || '').trim().toLowerCase();
+    const query = encodeURIComponent(movieTitle || '');
+    if (PROVIDER_SEARCH_URLS[key]) {
+        return PROVIDER_SEARCH_URLS[key](query);
+    }
+    if (fallbackWatchLink) {
+        return fallbackWatchLink;
+    }
+    return `https://www.google.com/search?q=${encodeURIComponent('watch ' + (movieTitle || '') + ' on ' + providerName)}`;
+}
+
+/* ============================================================================
+   Watchlist filter tabs (All / To Watch / Watched) — watchlist.php only.
+   Safe to call on pages without these elements; every lookup is guarded.
+============================================================================ */
+function getActiveWatchlistFilter() {
+    const activeTab = document.querySelector('.watchlist-filter-tab.active');
+    return activeTab ? activeTab.dataset.filter : 'all';
+}
+
+function applyActiveWatchlistFilter() {
+    const filter = getActiveWatchlistFilter();
+    const cards = document.querySelectorAll('.watchlist-card-col');
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+        const matches =
+            filter === 'all' ||
+            (filter === 'watched' && card.classList.contains('is-watched')) ||
+            (filter === 'unwatched' && card.classList.contains('is-unwatched'));
+        card.classList.toggle('filtered-out', !matches);
+        if (matches) visibleCount++;
+    });
+
+    const emptyState = document.getElementById('watchlist-empty-filter');
+    if (emptyState) {
+        emptyState.classList.toggle('d-none', visibleCount !== 0);
+    }
+}
+
+function updateWatchlistFilterCounts() {
+    const allCount = document.querySelectorAll('.watchlist-card-col').length;
+    const watchedCount = document.querySelectorAll('.watchlist-card-col.is-watched').length;
+    const unwatchedCount = allCount - watchedCount;
+
+    const setCount = (filter, value) => {
+        const tab = document.querySelector(`.watchlist-filter-tab[data-filter="${filter}"] .filter-count`);
+        if (tab) tab.textContent = value;
+    };
+    setCount('all', allCount);
+    setCount('watched', watchedCount);
+    setCount('unwatched', unwatchedCount);
+}
+
+function initWatchlistFilterTabs() {
+    const tabs = document.querySelectorAll('.watchlist-filter-tab');
+    if (!tabs.length) return;
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            applyActiveWatchlistFilter();
+        });
+    });
+}
+
+/* ============================================================================
+   Compare Movies — floating selection tray
+   Pick two movies from any grid, then jump to compare.php?a=ID&b=ID.
+   Selection lives only in memory for this page view (by design — comparing
+   is a quick in-the-moment thing, not something to persist across visits).
+============================================================================ */
+let compareSelection = [];
+
+function getCompareTray() {
+    let tray = document.getElementById('compare-tray');
+    if (!tray) {
+        tray = document.createElement('div');
+        tray.id = 'compare-tray';
+        tray.className = 'compare-tray';
+        document.body.appendChild(tray);
+    }
+    return tray;
+}
+
+function renderCompareTray() {
+    const tray = getCompareTray();
+
+    if (compareSelection.length === 0) {
+        tray.classList.remove('is-visible');
+        tray.innerHTML = '';
+        return;
+    }
+
+    tray.classList.add('is-visible');
+    const slots = [0, 1].map(i => {
+        const item = compareSelection[i];
+        if (!item) {
+            return `<div class="compare-slot compare-slot-empty">Pick a movie…</div>`;
+        }
+        return `
+            <div class="compare-slot">
+                <span class="text-truncate">${escapeHtml(item.title)}</span>
+                <button type="button" class="compare-slot-remove" data-remove-id="${item.id}" aria-label="Remove ${escapeHtml(item.title)} from comparison">&times;</button>
+            </div>`;
+    }).join('<span class="compare-vs">VS</span>');
+
+    const canCompare = compareSelection.length === 2;
+
+    tray.innerHTML = `
+        <div class="compare-tray-inner">
+            <div class="compare-slots">${slots}</div>
+            <button type="button" id="compare-now-btn" class="btn btn-warning-custom btn-sm px-4" ${canCompare ? '' : 'disabled'}>
+                Compare Now
+            </button>
+            <button type="button" id="compare-clear-btn" class="compare-clear-btn" aria-label="Clear comparison">Clear</button>
+        </div>`;
+
+    tray.querySelectorAll('.compare-slot-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.removeId;
+            compareSelection = compareSelection.filter(m => String(m.id) !== String(id));
+            document.querySelectorAll(`.compare-btn-toggle[data-movie-id="${id}"]`).forEach(b => b.classList.remove('is-selected'));
+            renderCompareTray();
+        });
+    });
+
+    document.getElementById('compare-clear-btn')?.addEventListener('click', () => {
+        compareSelection.forEach(item => {
+            document.querySelectorAll(`.compare-btn-toggle[data-movie-id="${item.id}"]`).forEach(b => b.classList.remove('is-selected'));
+        });
+        compareSelection = [];
+        renderCompareTray();
+    });
+
+    document.getElementById('compare-now-btn')?.addEventListener('click', () => {
+        if (compareSelection.length !== 2) return;
+        const [a, b] = compareSelection;
+        window.location.href = `compare.php?a=${encodeURIComponent(a.id)}&b=${encodeURIComponent(b.id)}`;
+    });
+}
+
+function toggleCompareSelection(movieId, title, btnEl) {
+    const alreadySelected = compareSelection.some(m => String(m.id) === String(movieId));
+
+    if (alreadySelected) {
+        compareSelection = compareSelection.filter(m => String(m.id) !== String(movieId));
+        btnEl.classList.remove('is-selected');
+        renderCompareTray();
+        return;
+    }
+
+    if (compareSelection.length >= 2) {
+        btnEl.classList.add('shake-error');
+        setTimeout(() => btnEl.classList.remove('shake-error'), 500);
+        showToast('You can only compare two movies at a time. Remove one first.', 'error');
+        return;
+    }
+
+    compareSelection.push({ id: movieId, title });
+    document.querySelectorAll(`.compare-btn-toggle[data-movie-id="${movieId}"]`).forEach(b => b.classList.add('is-selected'));
+    renderCompareTray();
+}
+
+/* ============================================================================
    Scroll Reveal Engine
    Adds the .reveal-on-scroll class (focus-pull effect defined in styles.css)
    to any matched elements, staggers their transition delay, and fades/sharpens
@@ -69,6 +269,12 @@ function movieCardHtml(movie) {
                     <div class="card-rating-badge position-absolute rounded bg-black bg-opacity-75 small font-monospace text-warning" style="right: 10px; top: 10px;">
                         ★ ${rating}
                     </div>
+                    <button class="compare-btn-toggle" type="button"
+                            data-movie-id="${movie.id}"
+                            data-title="${encodeURIComponent(title)}"
+                            aria-label="Add ${safeTitle} to compare">
+                        <i class="bi bi-bar-chart-line"></i>
+                    </button>
                 </div>
                 <div class="card-body p-3 d-flex flex-column justify-content-between flex-grow-1">
                     <div>
@@ -315,7 +521,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         outputTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-        fetch(`api/get_movies_by_mood.php?mood=${encodeURIComponent(selectedMood)}`)
+        const moodEndpoint = selectedMood === 'HIDDEN GEMS'
+            ? 'api/get_hidden_gems.php'
+            : `api/get_movies_by_mood.php?mood=${encodeURIComponent(selectedMood)}`;
+
+        fetch(moodEndpoint)
             .then(res => res.json())
             .then(data => {
                 if (data && data.error) {
@@ -523,6 +733,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initScrollReveal('#mood-selector-anchor, #how-it-works-section .text-center.mb-5');
 
     initHeroMotion();
+    initWatchlistFilterTabs();
 });
 
 /* ============================================================================
@@ -599,6 +810,72 @@ document.addEventListener('click', function (e) {
                 console.error(err);
                 showToast('Error communicating with the watchlist service.', 'error');
             });
+        return;
+    }
+
+    // 1b. Mark as Watched toggle (watchlist.php only)
+    const watchedBtn = e.target.closest('.watched-btn-toggle');
+    if (watchedBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!isLoggedIn) {
+            window.location.href = 'login.php';
+            return;
+        }
+
+        const movieId = watchedBtn.dataset.movieId;
+        const formData = new FormData();
+        formData.append('movie_id', movieId);
+        formData.append('csrf_token', csrfToken);
+
+        fetch('api/toggle_watched.php', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'error') {
+                    watchedBtn.classList.add('shake-error');
+                    setTimeout(() => watchedBtn.classList.remove('shake-error'), 500);
+                    showToast(data.message || 'Could not update watched status.', 'error');
+                    return;
+                }
+
+                const cardCol = document.getElementById(`watchlist-item-${movieId}`);
+
+                if (data.is_watched) {
+                    watchedBtn.classList.add('is-watched');
+                    watchedBtn.innerHTML = '<i class="bi bi-eye-fill"></i>';
+                    watchedBtn.title = 'Mark as not watched';
+                    cardCol?.classList.add('is-watched');
+                    cardCol?.classList.remove('is-unwatched');
+                    showToast('Marked as watched.', 'info', '✅');
+                } else {
+                    watchedBtn.classList.remove('is-watched');
+                    watchedBtn.innerHTML = '<i class="bi bi-eye"></i>';
+                    watchedBtn.title = 'Mark as watched';
+                    cardCol?.classList.remove('is-watched');
+                    cardCol?.classList.add('is-unwatched');
+                    showToast('Marked as not watched.', 'info', '👁️');
+                }
+
+                updateWatchlistFilterCounts();
+                applyActiveWatchlistFilter();
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Error communicating with the watchlist service.', 'error');
+            });
+        return;
+    }
+
+    // 1c. Compare selection toggle
+    const compareBtn = e.target.closest('.compare-btn-toggle');
+    if (compareBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const movieId = compareBtn.dataset.movieId;
+        const title = compareBtn.dataset.title ? decodeURIComponent(compareBtn.dataset.title) : 'Untitled';
+        toggleCompareSelection(movieId, title, compareBtn);
         return;
     }
 
@@ -682,14 +959,22 @@ document.addEventListener('click', function (e) {
 
                     const regionalProviders = movie['watch/providers']?.results?.IN;
                     const flatStreamingOptions = regionalProviders?.flatrate || regionalProviders?.rent || [];
+                    const watchLink = regionalProviders?.link || null;
 
                     if (flatStreamingOptions.length > 0) {
-                        providersTarget.innerHTML = flatStreamingOptions.slice(0, 4).map(provider => `
-                            <div class="d-flex align-items-center bg-dark bg-opacity-50 border border-secondary border-opacity-10 p-1 pe-2 rounded-2" title="${escapeHtml(provider.provider_name)}">
-                                <img src="https://image.tmdb.org/t/p/w92${provider.logo_path}" alt="${escapeHtml(provider.provider_name)}" class="rounded" style="width:24px; height:24px; object-fit:cover;">
-                                <span class="ms-2 font-sans-serif text-white-50" style="font-size:0.75rem;">${escapeHtml(provider.provider_name)}</span>
-                            </div>
-                        `).join('');
+                        providersTarget.innerHTML = flatStreamingOptions.slice(0, 4).map(provider => {
+                            const providerName = escapeHtml(provider.provider_name);
+                            const href = buildProviderUrl(provider.provider_name, movie.title, watchLink);
+                            return `
+                                <a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"
+                                   class="provider-chip d-flex align-items-center bg-dark bg-opacity-50 border border-secondary border-opacity-10 p-1 pe-2 rounded-2 text-decoration-none"
+                                   title="Watch on ${providerName}">
+                                    <img src="https://image.tmdb.org/t/p/w92${provider.logo_path}" alt="${providerName}" class="rounded" style="width:24px; height:24px; object-fit:cover;">
+                                    <span class="ms-2 font-sans-serif text-white-50" style="font-size:0.75rem;">${providerName}</span>
+                                    <i class="bi bi-box-arrow-up-right ms-2 text-muted" style="font-size:0.65rem;"></i>
+                                </a>
+                            `;
+                        }).join('');
                     } else {
                         providersTarget.innerHTML = '<span class="text-muted small">Not currently streaming locally. Check theater listings!</span>';
                     }

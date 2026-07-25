@@ -219,6 +219,12 @@ include 'includes/header.php';
                     <span class="small fw-bold tracking-wider text-uppercase font-monospace mood-title">Tear-Jerker</span>
                 </div>
             </div>
+            <div class="col">
+                <div class="mood-card text-center p-3 rounded-3" data-mood="HIDDEN GEMS" role="button" tabindex="0">
+                    <span class="fs-2 mb-2 d-block mood-icon">💎</span>
+                    <span class="small fw-bold tracking-wider text-uppercase font-monospace mood-title">Hidden Gems</span>
+                </div>
+            </div>
         </div>
 
         <div class="text-center mt-4">

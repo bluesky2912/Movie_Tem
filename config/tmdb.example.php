@@ -127,4 +127,29 @@ class TMDBEngine {
             'append_to_response' => 'videos,watch/providers'
         ]);
     }
+
+    public function getMovieCompareData($movieId) {
+        // Credits gives us cast for the overlap calculation; budget, revenue,
+        // runtime, vote_average, vote_count, and popularity all come free on
+        // the base movie object. TMDB has no awards data at all, so that's
+        // deliberately not something we can surface here.
+        return $this->fetchFromTMDB('movie/' . (int) $movieId, [
+            'append_to_response' => 'credits'
+        ]);
+    }
+
+    public function getHiddenGems() {
+        // Amazing movies most people haven't heard of: rated highly, but by
+        // a small enough crowd that they never bubble up to "trending."
+        // The vote_count floor keeps out one-review flukes; the ceiling is
+        // what keeps out anything actually mainstream.
+        return $this->fetchFromTMDB('discover/movie', [
+            'sort_by'          => 'vote_average.desc',
+            'vote_average.gte' => 7.5,
+            'vote_count.gte'   => 50,
+            'vote_count.lte'   => 20000,
+            'include_adult'    => 'false',
+            'page'             => 1
+        ]);
+    }
 }

@@ -398,8 +398,234 @@ textarea.form-control:focus {
     border-color: var(--accent-bright);
 }
 
+/* ---------- Mark as Watched ---------- */
+.watched-btn-toggle {
+    position: absolute;
+    top: 54px;
+    left: 10px;
+    z-index: 10;
+    background: rgba(8, 5, 3, 0.75);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.watched-btn-toggle:hover {
+    background: var(--accent);
+    border-color: var(--success);
+    transform: scale(1.1);
+}
+.watched-btn-toggle.is-watched {
+    background: var(--success);
+    color: var(--bg-main);
+    border-color: var(--success);
+}
+
+.watched-ribbon {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    background: rgba(106, 174, 127, 0.9);
+    color: var(--bg-main);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 4px;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+}
+.is-watched .watched-ribbon {
+    opacity: 1;
+    transform: translateY(0);
+}
+.is-watched .card-img-top {
+    filter: grayscale(0.4) brightness(0.7);
+    transition: filter 0.3s ease;
+}
+.is-watched .movie-card-interactive:hover .card-img-top {
+    filter: grayscale(0.15) brightness(0.85);
+}
+
+/* ---------- Watchlist filter tabs ---------- */
+.watchlist-filter-tab {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    padding: 7px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.watchlist-filter-tab:hover {
+    border-color: var(--accent-bright-dim);
+    color: var(--text-primary);
+}
+.watchlist-filter-tab.active {
+    background: var(--accent);
+    border-color: var(--accent-bright);
+    color: var(--text-primary);
+}
+.watchlist-filter-tab .filter-count {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+}
+.watchlist-filter-tab.active .filter-count {
+    background: rgba(0, 0, 0, 0.35);
+}
+.watchlist-card-col {
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.watchlist-card-col.filtered-out {
+    display: none;
+}
+
+/* ---------- Compare Movies ---------- */
+.compare-btn-toggle {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    z-index: 3;
+    background: rgba(8, 5, 3, 0.75);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.compare-btn-toggle:hover {
+    background: var(--accent);
+    border-color: var(--accent-bright);
+    transform: scale(1.1);
+}
+.compare-btn-toggle.is-selected {
+    background: var(--accent-bright);
+    color: var(--bg-main);
+    border-color: var(--accent-bright);
+}
+
+.compare-tray {
+    position: fixed;
+    left: 50%;
+    bottom: -100px;
+    transform: translateX(-50%);
+    z-index: 10500;
+    opacity: 0;
+    transition: bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    width: min(92%, 560px);
+}
+.compare-tray.is-visible {
+    bottom: 20px;
+    opacity: 1;
+}
+.compare-tray-inner {
+    background: var(--surface-raised);
+    border: 1px solid var(--accent-bright-dim);
+    border-radius: 14px;
+    padding: 12px 16px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.compare-slots {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+.compare-slot {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+.compare-slot-empty {
+    color: var(--text-faint);
+    font-style: italic;
+}
+.compare-slot-remove {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.compare-slot-remove:hover {
+    color: var(--error);
+}
+.compare-vs {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent-bright);
+    flex-shrink: 0;
+}
+.compare-clear-btn {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 0.75rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.compare-clear-btn:hover {
+    color: var(--text-primary);
+}
+
+@media (max-width: 576px) {
+    .compare-tray-inner { flex-wrap: wrap; }
+    .compare-slots { order: 1; width: 100%; }
+    #compare-now-btn { order: 2; flex: 1; }
+    .compare-clear-btn { order: 3; }
+}
+
 .card-rating-badge {
     padding: 3px 8px;
+}
+
+/* ---------- Streaming provider badges are now clickable links ---------- */
+.provider-chip {
+    transition: transform 0.15s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.provider-chip:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-bright-dim) !important;
+    background-color: var(--surface-raised) !important;
+}
+.provider-chip:hover span {
+    color: var(--text-primary) !important;
 }
 
 /* Star rating — brass gold on hover/selected, not Bootstrap's default amber */

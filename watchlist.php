@@ -19,7 +19,7 @@ $db = $dbClass->getConnection();
 // Everything we need to render the grid is already stored at save-time —
 // no per-item TMDB round trips needed here.
 $stmt = $db->prepare(
-    "SELECT tmdb_movie_id, title, poster_path, vote_average, release_date
+    "SELECT tmdb_movie_id, title, poster_path, vote_average, release_date, is_watched
      FROM watchlist WHERE user_id = :uid ORDER BY added_at DESC"
 );
 $stmt->execute(['uid' => $userId]);
@@ -46,7 +46,13 @@ include 'includes/header.php';
             <a href="index.php#mood-selector-anchor" class="btn btn-warning-custom btn-sm">Find something good</a>
         </div>
     <?php else: ?>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4">
+        <div class="d-flex gap-2 mb-4" id="watchlist-filter-tabs">
+            <button type="button" class="watchlist-filter-tab active" data-filter="all">All <span class="filter-count"><?php echo count($savedItems); ?></span></button>
+            <button type="button" class="watchlist-filter-tab" data-filter="unwatched">To Watch <span class="filter-count"><?php echo count(array_filter($savedItems, fn($i) => !$i['is_watched'])); ?></span></button>
+            <button type="button" class="watchlist-filter-tab" data-filter="watched">Watched <span class="filter-count"><?php echo count(array_filter($savedItems, fn($i) => $i['is_watched'])); ?></span></button>
+        </div>
+
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4" id="watchlist-grid">
             <?php foreach ($savedItems as $item):
                 $movieId = $item['tmdb_movie_id'];
                 $posterPath = $item['poster_path']
@@ -55,12 +61,17 @@ include 'includes/header.php';
                 $rating = $item['vote_average'] !== null ? number_format((float) $item['vote_average'], 1) : 'N/A';
                 $year = !empty($item['release_date']) ? substr($item['release_date'], 0, 4) : 'Unknown';
                 $title = $item['title'] ?: 'Untitled';
+                $isWatched = (bool) $item['is_watched'];
             ?>
-                <div class="col" id="watchlist-item-<?php echo $movieId; ?>">
+                <div class="col watchlist-card-col <?php echo $isWatched ? 'is-watched' : 'is-unwatched'; ?>" id="watchlist-item-<?php echo $movieId; ?>">
                     <div class="card h-100 bg-surface border border-secondary border-opacity-10 overflow-hidden shadow movie-card-interactive" data-open-modal="<?php echo $movieId; ?>" style="cursor: pointer;">
 
                         <button class="watchlist-btn-toggle active-saved" data-movie-id="<?php echo $movieId; ?>" title="Remove from watchlist" aria-label="Remove from watchlist">
                             <i class="bi bi-bookmark-check-fill"></i>
+                        </button>
+
+                        <button class="watched-btn-toggle <?php echo $isWatched ? 'is-watched' : ''; ?>" data-movie-id="<?php echo $movieId; ?>" title="<?php echo $isWatched ? 'Mark as not watched' : 'Mark as watched'; ?>" aria-label="Toggle watched status">
+                            <i class="bi <?php echo $isWatched ? 'bi-eye-fill' : 'bi-eye'; ?>"></i>
                         </button>
 
                         <div class="position-relative overflow-hidden img-hover-container">
@@ -68,6 +79,7 @@ include 'includes/header.php';
                             <div class="card-rating-badge position-absolute rounded bg-black bg-opacity-75 small font-monospace text-warning" style="right: 10px; top: 10px;">
                                 ★ <?php echo $rating; ?>
                             </div>
+                            <div class="watched-ribbon">Watched</div>
                         </div>
                         <div class="card-body p-3 d-flex flex-column justify-content-between">
                             <div>
@@ -78,6 +90,10 @@ include 'includes/header.php';
                     </div>
                 </div>
             <?php endforeach; ?>
+        </div>
+
+        <div id="watchlist-empty-filter" class="d-none bg-surface p-4 rounded-4 border border-secondary border-opacity-10 mt-4 text-center">
+            <p class="small text-muted mb-0">Nothing in this view yet.</p>
         </div>
     <?php endif; ?>
 </main>
