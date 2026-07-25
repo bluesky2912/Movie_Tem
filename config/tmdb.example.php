@@ -152,4 +152,17 @@ class TMDBEngine {
             'page'             => 1
         ]);
     }
+
+    public function searchCollections($query) {
+        return $this->fetchFromTMDB('search/collection', [
+            'query' => $query,
+            'page'  => 1
+        ]);
+    }
+
+    public function getCollectionDetails($collectionId) {
+        // A "collection" is TMDB's own curated franchise grouping — real,
+        // editorially maintained data, not something we're inferring.
+        return $this->fetchFromTMDB('collection/' . (int) $collectionId);
+    }
 }

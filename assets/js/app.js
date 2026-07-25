@@ -118,6 +118,58 @@ function initWatchlistFilterTabs() {
 }
 
 /* ============================================================================
+   Timeline page: franchise/collection search autocomplete
+============================================================================ */
+function initTimelineSearch() {
+    const input = document.getElementById('timeline-search-input');
+    const box = document.getElementById('timeline-suggestions-box');
+    if (!input || !box) return;
+
+    let debounceTimeout;
+    input.addEventListener('input', function () {
+        clearTimeout(debounceTimeout);
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            box.classList.add('d-none');
+            return;
+        }
+
+        debounceTimeout = setTimeout(() => {
+            fetch(`api/search_collections.php?query=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(results => {
+                    if (!results || results.error || results.length === 0) {
+                        box.classList.add('d-none');
+                        return;
+                    }
+                    box.innerHTML = results.map(c => `
+                        <button type="button" class="list-group-item list-group-item-action bg-dark text-white border-secondary border-opacity-10 small py-2 d-flex align-items-center gap-2 timeline-suggestion-item" data-collection-id="${c.id}">
+                            <i class="bi bi-collection-play text-warning-custom small"></i>
+                            <span class="text-truncate">${escapeHtml(c.name)}</span>
+                        </button>
+                    `).join('');
+                    box.classList.remove('d-none');
+                })
+                .catch(() => box.classList.add('d-none'));
+        }, 250);
+    });
+
+    box.addEventListener('click', (e) => {
+        const item = e.target.closest('.timeline-suggestion-item');
+        if (item) {
+            window.location.href = `timeline.php?collection_id=${encodeURIComponent(item.dataset.collectionId)}`;
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !box.contains(e.target)) {
+            box.classList.add('d-none');
+        }
+    });
+}
+
+/* ============================================================================
    Compare Movies — floating selection tray
    Pick two movies from any grid, then jump to compare.php?a=ID&b=ID.
    Selection lives only in memory for this page view (by design — comparing
@@ -734,6 +786,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initHeroMotion();
     initWatchlistFilterTabs();
+    initTimelineSearch();
+    initScrollReveal('.timeline-node');
 });
 
 /* ============================================================================
