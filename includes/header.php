@@ -6,9 +6,6 @@ if (session_status() === PHP_SESSION_NONE) {
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
 ?>
 
 <!DOCTYPE html>
@@ -56,6 +53,9 @@ if (empty($_SESSION['csrf_token'])) {
                 </li>
                 <li class="nav-item">
                     <a class="nav-link text-white-50" href="timeline.php">Timeline</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white-50" href="match.php">Movie Match</a>
                 </li>
             </ul>
 

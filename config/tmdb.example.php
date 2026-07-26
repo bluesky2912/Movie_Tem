@@ -165,4 +165,11 @@ class TMDBEngine {
         // editorially maintained data, not something we're inferring.
         return $this->fetchFromTMDB('collection/' . (int) $collectionId);
     }
+
+    public function getPopularMovies($page = 1) {
+        return $this->fetchFromTMDB('movie/popular', [
+            'page'          => $page,
+            'include_adult' => 'false'
+        ]);
+    }
 }

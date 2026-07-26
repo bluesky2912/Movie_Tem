@@ -170,6 +170,247 @@ function initTimelineSearch() {
 }
 
 /* ============================================================================
+   Movie Match — two-person swipe game (match.php only)
+   Both players swipe the SAME shuffled deck, one after another on the same
+   device. A "match" is any movie both players liked. Everything lives in
+   memory for the duration of the session — there's nothing to persist here,
+   the whole point is a quick, in-the-moment decision.
+============================================================================ */
+let matchDeck = [];
+let matchIndex = 0;
+let matchCurrentPlayer = 1;
+let matchPlayer1Likes = [];
+let matchPlayer2Likes = [];
+
+function setupMatchCardDrag(cardEl, onSwiped) {
+    let startX = 0;
+    let startY = 0;
+    let currentX = 0;
+    let dragging = false;
+    const threshold = 110;
+
+    function updateStamps(dx) {
+        const likeStamp = cardEl.querySelector('.match-card-stamp.like');
+        const nopeStamp = cardEl.querySelector('.match-card-stamp.nope');
+        const strength = Math.min(Math.abs(dx) / threshold, 1);
+        if (dx > 0) {
+            if (likeStamp) likeStamp.style.opacity = strength;
+            if (nopeStamp) nopeStamp.style.opacity = 0;
+        } else {
+            if (nopeStamp) nopeStamp.style.opacity = strength;
+            if (likeStamp) likeStamp.style.opacity = 0;
+        }
+    }
+
+    function onPointerDown(e) {
+        dragging = true;
+        cardEl.classList.add('dragging');
+        startX = e.clientX;
+        startY = e.clientY;
+        cardEl.setPointerCapture(e.pointerId);
+    }
+    function onPointerMove(e) {
+        if (!dragging) return;
+        currentX = e.clientX - startX;
+        const dy = e.clientY - startY;
+        const rotate = currentX / 20;
+        cardEl.style.transform = `translate(${currentX}px, ${dy * 0.4}px) rotate(${rotate}deg)`;
+        updateStamps(currentX);
+    }
+    function onPointerUp() {
+        if (!dragging) return;
+        dragging = false;
+        cardEl.classList.remove('dragging');
+        if (Math.abs(currentX) > threshold) {
+            onSwiped(currentX > 0);
+        } else {
+            cardEl.style.transform = '';
+            cardEl.querySelectorAll('.match-card-stamp').forEach(s => { s.style.opacity = 0; });
+        }
+        currentX = 0;
+    }
+
+    cardEl.addEventListener('pointerdown', onPointerDown);
+    cardEl.addEventListener('pointermove', onPointerMove);
+    cardEl.addEventListener('pointerup', onPointerUp);
+    cardEl.addEventListener('pointercancel', onPointerUp);
+}
+
+function updateMatchProgress() {
+    const bar = document.getElementById('match-progress-bar');
+    const label = document.getElementById('match-player-label');
+    if (bar) bar.style.width = `${(matchIndex / matchDeck.length) * 100}%`;
+    if (label) label.textContent = `Player ${matchCurrentPlayer}`;
+}
+
+function renderMatchStack() {
+    const stack = document.getElementById('match-card-stack');
+    if (!stack) return;
+    stack.innerHTML = '';
+
+    const visible = matchDeck.slice(matchIndex, matchIndex + 3);
+
+    // Append back-to-front so the current (top) card ends up last in the
+    // DOM — that's also what the Yes/No buttons target via :last-child.
+    visible.slice().reverse().forEach((movie, revIdx) => {
+        const posIdx = visible.length - 1 - revIdx; // 0 = the interactive top card
+        const poster = movie.poster_path
+            ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+            : 'https://via.placeholder.com/500x750/1a1510/fff?text=No+Poster';
+        const safeTitle = escapeHtml(movie.title || 'Untitled');
+
+        const card = document.createElement('div');
+        card.className = 'match-card';
+        card.style.zIndex = 10 - posIdx;
+        card.style.transform = posIdx === 0 ? '' : `scale(${1 - posIdx * 0.04}) translateY(${posIdx * 10}px)`;
+        card.style.opacity = posIdx === 0 ? '1' : `${1 - posIdx * 0.25}`;
+        card.innerHTML = `
+            <img src="${poster}" alt="${safeTitle}">
+            <span class="match-card-stamp like">LIKE</span>
+            <span class="match-card-stamp nope">NOPE</span>
+            <div class="match-card-overlay">
+                <h5 class="match-card-title">${safeTitle}</h5>
+                <div class="match-card-meta">★ ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'} · ${movie.release_date ? movie.release_date.substring(0, 4) : 'Unknown'}</div>
+            </div>
+        `;
+        stack.appendChild(card);
+
+        if (posIdx === 0) {
+            setupMatchCardDrag(card, (liked) => commitMatchSwipe(liked, card));
+        }
+    });
+
+    updateMatchProgress();
+}
+
+function commitMatchSwipe(liked, cardEl) {
+    const movie = matchDeck[matchIndex];
+    if (liked) {
+        (matchCurrentPlayer === 1 ? matchPlayer1Likes : matchPlayer2Likes).push(movie.id);
+    }
+
+    const flyX = liked ? window.innerWidth : -window.innerWidth;
+    cardEl.style.transition = 'transform 0.4s ease, opacity 0.4s ease';
+    cardEl.style.transform = `translate(${flyX}px, -40px) rotate(${liked ? 30 : -30}deg)`;
+    cardEl.style.opacity = '0';
+
+    setTimeout(() => {
+        matchIndex++;
+        if (matchIndex >= matchDeck.length) {
+            if (matchCurrentPlayer === 1) {
+                showMatchHandoff();
+            } else {
+                finishMatch();
+            }
+        } else {
+            renderMatchStack();
+        }
+    }, 300);
+}
+
+function showMatchHandoff() {
+    document.getElementById('match-game')?.classList.add('d-none');
+    document.getElementById('match-handoff')?.classList.remove('d-none');
+}
+
+function startPlayer2Round() {
+    matchCurrentPlayer = 2;
+    matchIndex = 0;
+    document.getElementById('match-handoff')?.classList.add('d-none');
+    document.getElementById('match-game')?.classList.remove('d-none');
+    renderMatchStack();
+}
+
+function renderMatchReveal(matches) {
+    document.getElementById('match-game')?.classList.add('d-none');
+    document.getElementById('match-handoff')?.classList.add('d-none');
+    const revealSection = document.getElementById('match-reveal');
+    const content = document.getElementById('match-reveal-content');
+    if (!revealSection || !content) return;
+
+    revealSection.classList.remove('d-none');
+
+    if (matches.length === 0) {
+        content.innerHTML = `
+            <div class="display-1 mb-3">😅</div>
+            <h2 class="text-white fw-bold mb-2" style="font-family:'Fraunces',serif; font-style:italic;">No matches this round!</h2>
+            <p class="text-muted mb-4">You two have wildly different taste. Want to try a fresh batch?</p>
+            <button type="button" id="match-retry-btn" class="btn btn-warning-custom px-4 py-2 rounded-3 fw-semibold">🔁 Try Again</button>
+        `;
+    } else {
+        content.innerHTML = `
+            <div class="display-1 mb-2">🎉</div>
+            <h2 class="text-white fw-bold mb-2" style="font-family:'Fraunces',serif; font-style:italic;">You matched on ${matches.length} movie${matches.length > 1 ? 's' : ''}!</h2>
+            <p class="text-muted mb-4">Pick one and start watching.</p>
+            <div class="row row-cols-2 row-cols-md-4 g-4 justify-content-center mb-4">
+                ${matches.map(movieCardHtml).join('')}
+            </div>
+            <button type="button" id="match-retry-btn" class="btn btn-outline-light px-4 py-2 rounded-pill">🔁 Play Again</button>
+        `;
+        fireConfetti(window.innerWidth / 2, revealSection.getBoundingClientRect().top + 120, 40);
+        initScrollReveal('.movie-card-interactive', content);
+    }
+
+    document.getElementById('match-retry-btn')?.addEventListener('click', startMovieMatch);
+}
+
+function finishMatch() {
+    const matches = matchDeck.filter(m => matchPlayer1Likes.includes(m.id) && matchPlayer2Likes.includes(m.id));
+    renderMatchReveal(matches);
+}
+
+function startMovieMatch() {
+    document.getElementById('match-intro')?.classList.add('d-none');
+    document.getElementById('match-reveal')?.classList.add('d-none');
+    document.getElementById('match-handoff')?.classList.add('d-none');
+    const gameSection = document.getElementById('match-game');
+    gameSection?.classList.remove('d-none');
+
+    matchIndex = 0;
+    matchCurrentPlayer = 1;
+    matchPlayer1Likes = [];
+    matchPlayer2Likes = [];
+
+    const stack = document.getElementById('match-card-stack');
+    if (stack) stack.innerHTML = '<div class="text-center text-muted py-5 w-100">Shuffling movies…</div>';
+    updateMatchProgress();
+
+    fetch('api/get_match_deck.php')
+        .then(res => res.json())
+        .then(data => {
+            if (!data || data.error || !data.length) {
+                showToast("Couldn't load movies for matching. Try again.", 'error');
+                gameSection?.classList.add('d-none');
+                document.getElementById('match-intro')?.classList.remove('d-none');
+                return;
+            }
+            matchDeck = data;
+            renderMatchStack();
+        })
+        .catch(() => {
+            showToast('Network error loading the match deck.', 'error');
+            gameSection?.classList.add('d-none');
+            document.getElementById('match-intro')?.classList.remove('d-none');
+        });
+}
+
+function initMovieMatch() {
+    const startBtn = document.getElementById('match-start-btn');
+    if (!startBtn) return; // not on this page
+
+    startBtn.addEventListener('click', startMovieMatch);
+    document.getElementById('match-continue-btn')?.addEventListener('click', startPlayer2Round);
+    document.getElementById('match-yes-btn')?.addEventListener('click', () => {
+        const topCard = document.querySelector('#match-card-stack .match-card:last-child');
+        if (topCard) commitMatchSwipe(true, topCard);
+    });
+    document.getElementById('match-no-btn')?.addEventListener('click', () => {
+        const topCard = document.querySelector('#match-card-stack .match-card:last-child');
+        if (topCard) commitMatchSwipe(false, topCard);
+    });
+}
+
+/* ============================================================================
    Compare Movies — floating selection tray
    Pick two movies from any grid, then jump to compare.php?a=ID&b=ID.
    Selection lives only in memory for this page view (by design — comparing
@@ -788,6 +1029,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initWatchlistFilterTabs();
     initTimelineSearch();
     initScrollReveal('.timeline-node');
+    initMovieMatch();
 });
 
 /* ============================================================================

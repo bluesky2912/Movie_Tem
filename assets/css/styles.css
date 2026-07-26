@@ -42,9 +42,8 @@ body::before {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-@media (prefers-reduced-motion: reduce) {
-    body::before { display: none; }
-}
+/* (reduced-motion override for the film-grain overlay now lives in the
+   single consolidated block near the end of this file) */
 
 .bg-surface {
     background-color: var(--surface) !important;
@@ -195,6 +194,7 @@ textarea:focus-visible,
     cursor: pointer;
     position: relative;
     overflow: hidden;
+    will-change: transform;
     transition: transform 0.25s cubic-bezier(0.165, 0.84, 0.44, 1),
                 border-color 0.25s ease,
                 background-color 0.25s ease,
@@ -231,6 +231,7 @@ textarea:focus-visible,
 .mood-icon {
     filter: grayscale(0.3) opacity(0.9);
     transition: filter 0.25s ease, transform 0.25s ease;
+    animation: idleBob 3.2s ease-in-out infinite;
 }
 
 .mood-card:hover .mood-icon,
@@ -315,15 +316,8 @@ hr {
     to { opacity: 1; transform: translateY(0); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .mood-card, .mood-icon, .mood-title, .mood-title::after,
-    .btn-warning-custom, #mood-movies-output-target {
-        transition: none;
-        animation: none;
-    }
-    .mood-card:hover { transform: none; }
-    .skeleton-card { animation: none; background: var(--surface); }
-}
+/* (reduced-motion overrides for mood cards, buttons, and skeletons now live
+   in the single consolidated block near the end of this file) */
 
 /* ---------- Forms ---------- */
 
@@ -366,6 +360,8 @@ textarea.form-control:focus {
 
 .movie-card-interactive {
     position: relative;
+    transition: transform 0.25s ease-out, box-shadow 0.25s ease;
+    will-change: transform;
 }
 
 .watchlist-btn-toggle {
@@ -709,6 +705,100 @@ textarea.form-control:focus {
     .timeline-left .timeline-dot, .timeline-right .timeline-dot { left: 12px; right: auto; }
 }
 
+/* ---------- Movie Match ---------- */
+.match-card-stack {
+    position: relative;
+    max-width: 320px;
+    height: 460px;
+    margin: 0 auto;
+}
+.match-card {
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.3s ease;
+}
+.match-card.dragging {
+    transition: none;
+    cursor: grabbing;
+}
+.match-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}
+.match-card-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 16px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+}
+.match-card-title {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    color: #fff;
+    font-size: 1.1rem;
+    margin: 0;
+}
+.match-card-meta {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+.match-card-stamp {
+    position: absolute;
+    top: 24px;
+    padding: 6px 14px;
+    border: 3px solid;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 1.3rem;
+    text-transform: uppercase;
+    opacity: 0;
+    pointer-events: none;
+}
+.match-card-stamp.like {
+    right: 24px;
+    color: var(--success);
+    border-color: var(--success);
+    transform: rotate(15deg);
+}
+.match-card-stamp.nope {
+    left: 24px;
+    color: var(--error);
+    border-color: var(--error);
+    transform: rotate(-15deg);
+}
+
+.match-swipe-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.match-swipe-btn:hover { transform: scale(1.1); }
+.match-swipe-no { color: var(--error); }
+.match-swipe-yes { color: var(--success); }
+.match-swipe-no:hover  { border-color: var(--error); background: rgba(192, 90, 90, 0.1); }
+.match-swipe-yes:hover { border-color: var(--success); background: rgba(106, 174, 127, 0.1); }
+
 .card-rating-badge {
     padding: 3px 8px;
 }
@@ -746,7 +836,7 @@ textarea.form-control:focus {
 
 .reveal-on-scroll {
     opacity: 0;
-    transform: translateY(26px) scale(0.98);
+    transform: translateY(26px) scale(0.98) rotate(var(--tilt, 0deg));
     filter: blur(6px);
     transition: opacity 0.8s cubic-bezier(0.19, 1, 0.22, 1),
                 transform 0.8s cubic-bezier(0.19, 1, 0.22, 1),
@@ -756,7 +846,7 @@ textarea.form-control:focus {
 
 .reveal-on-scroll.is-visible {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0) scale(1) rotate(0deg);
     filter: blur(0);
 }
 
@@ -917,11 +1007,8 @@ textarea.form-control:focus {
 }
 
 /* ---------- 3D tilt for mood cards + movie cards, driven by JS mousemove ---------- */
-.mood-card,
-.movie-card-interactive {
-    transition: transform 0.25s ease-out, box-shadow 0.25s ease;
-    will-change: transform;
-}
+/* (both .mood-card and .movie-card-interactive already carry the needed
+   transition + will-change in their base rules above) */
 
 /* ---------- Mood icon wiggle on hover ---------- */
 .mood-card:hover .mood-icon {
@@ -964,12 +1051,7 @@ textarea.form-control:focus {
 }
 
 /* ---------- Scroll reveal: alternating tilt so items don't march in uniformly ---------- */
-.reveal-on-scroll {
-    transform: translateY(26px) scale(0.98) rotate(var(--tilt, 0deg));
-}
-.reveal-on-scroll.is-visible {
-    transform: translateY(0) scale(1) rotate(0deg) !important;
-}
+/* (base .reveal-on-scroll rule above already includes the --tilt rotation) */
 
 /* ---------- Button ripple ---------- */
 .btn-ripple-layer {
@@ -1109,7 +1191,7 @@ textarea.form-control:focus {
 }
 
 /* ---------- Idle bob on mood icons — life even without hovering ---------- */
-.mood-icon { animation: idleBob 3.2s ease-in-out infinite; }
+/* (base .mood-icon rule above already carries the idleBob animation) */
 .mood-card:nth-child(2n) .mood-icon { animation-delay: 0.4s; }
 .mood-card:nth-child(3n) .mood-icon { animation-delay: 0.8s; }
 .mood-card:nth-child(5n) .mood-icon { animation-delay: 1.2s; }
@@ -1147,8 +1229,13 @@ textarea.form-control:focus {
 }
 .shake-error { animation: shakeNo 0.5s ease; }
 
-/* ---------- Respect reduced motion across the whole motion + fun system ---------- */
+/* ---------- Respect reduced motion across the whole site ---------- */
 @media (prefers-reduced-motion: reduce) {
+    body::before { display: none; }
+
+    .mood-title::after,
+    #mood-movies-output-target,
+    .skeleton-card,
     .reveal-on-scroll,
     .hero-iris-reveal,
     .projector-beam,
@@ -1177,4 +1264,6 @@ textarea.form-control:focus {
         opacity: 1 !important;
         transform: none !important;
     }
+
+    .skeleton-card { background: var(--surface) !important; }
 }
