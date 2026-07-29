@@ -172,4 +172,30 @@ class TMDBEngine {
             'include_adult' => 'false'
         ]);
     }
+
+    public function discoverMovies($genreIds = '', $dateFrom = null, $dateTo = null, $page = 1) {
+        $params = [
+            'sort_by'          => 'popularity.desc',
+            'vote_count.gte'   => 100,
+            'include_adult'    => 'false',
+            'page'             => $page
+        ];
+        if (!empty($genreIds)) {
+            $params['with_genres'] = $genreIds;
+        }
+        if (!empty($dateFrom)) {
+            $params['primary_release_date.gte'] = $dateFrom;
+        }
+        if (!empty($dateTo)) {
+            $params['primary_release_date.lte'] = $dateTo;
+        }
+        return $this->fetchFromTMDB('discover/movie', $params);
+    }
+
+    public function getTopRatedMovies($page = 1) {
+        return $this->fetchFromTMDB('movie/top_rated', [
+            'page'          => $page,
+            'include_adult' => 'false'
+        ]);
+    }
 }

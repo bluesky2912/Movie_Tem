@@ -120,6 +120,43 @@ function initWatchlistFilterTabs() {
 /* ============================================================================
    Timeline page: franchise/collection search autocomplete
 ============================================================================ */
+/* ============================================================================
+   Cinematic rotating background — fetches a handful of top-rated movie
+   backdrops and crossfades between them behind the page content. Only
+   activates on pages that actually include the #cinematic-bg container.
+============================================================================ */
+function initCinematicBackground() {
+    const container = document.getElementById('cinematic-bg');
+    if (!container) return;
+
+    fetch('api/get_background_movies.php')
+        .then(res => res.json())
+        .then(data => {
+            if (!data || data.error || !data.length) return;
+
+            data.forEach((url, i) => {
+                const slide = document.createElement('div');
+                slide.className = 'bg-slide' + (i === 0 ? ' active' : '');
+                slide.style.backgroundImage = `url(${url})`;
+                container.appendChild(slide);
+            });
+
+            const slides = container.querySelectorAll('.bg-slide');
+            if (slides.length <= 1) return;
+
+            let current = 0;
+            setInterval(() => {
+                slides[current].classList.remove('active');
+                current = (current + 1) % slides.length;
+                slides[current].classList.add('active');
+            }, 7000);
+        })
+        .catch(() => {
+            // Silent failure is the right call here — this is pure
+            // atmosphere, not something worth interrupting the page over.
+        });
+}
+
 function initTimelineSearch() {
     const input = document.getElementById('timeline-search-input');
     const box = document.getElementById('timeline-suggestions-box');
@@ -181,6 +218,9 @@ let matchIndex = 0;
 let matchCurrentPlayer = 1;
 let matchPlayer1Likes = [];
 let matchPlayer2Likes = [];
+let matchDeckLoading = false;
+let matchSelectedGenres = [];
+let matchSelectedEra = 'any';
 
 function setupMatchCardDrag(cardEl, onSwiped) {
     let startX = 0;
@@ -360,7 +400,24 @@ function finishMatch() {
 }
 
 function startMovieMatch() {
+    // Guard against rapid double-clicks or a slow/failing request still in
+    // flight — without this, every extra click fired its own fetch and
+    // stacked its own error toast on top of the last one.
+    if (matchDeckLoading) return;
+    matchDeckLoading = true;
+
+    // Whichever trigger button exists right now (the initial "Start a
+    // Match" button, or a "Try Again" / "Play Again" button rendered after
+    // a previous round) gets disabled for the duration of the request.
+    const triggerBtn = document.getElementById('match-start-btn') || document.getElementById('match-retry-btn');
+    if (triggerBtn) {
+        triggerBtn.disabled = true;
+        triggerBtn.dataset.originalText = triggerBtn.innerHTML;
+        triggerBtn.innerHTML = 'Shuffling…';
+    }
+
     document.getElementById('match-intro')?.classList.add('d-none');
+    document.getElementById('match-how-it-works')?.classList.add('d-none');
     document.getElementById('match-reveal')?.classList.add('d-none');
     document.getElementById('match-handoff')?.classList.add('d-none');
     const gameSection = document.getElementById('match-game');
@@ -375,23 +432,74 @@ function startMovieMatch() {
     if (stack) stack.innerHTML = '<div class="text-center text-muted py-5 w-100">Shuffling movies…</div>';
     updateMatchProgress();
 
-    fetch('api/get_match_deck.php')
+    function backToIntro() {
+        matchDeckLoading = false;
+        gameSection?.classList.add('d-none');
+        document.getElementById('match-intro')?.classList.remove('d-none');
+        document.getElementById('match-how-it-works')?.classList.remove('d-none');
+        if (triggerBtn) {
+            triggerBtn.disabled = false;
+            triggerBtn.innerHTML = triggerBtn.dataset.originalText || '🎬 Start a Match';
+        }
+    }
+
+    fetch(buildMatchDeckUrl())
         .then(res => res.json())
         .then(data => {
-            if (!data || data.error || !data.length) {
+            if (data && data.error) {
                 showToast("Couldn't load movies for matching. Try again.", 'error');
-                gameSection?.classList.add('d-none');
-                document.getElementById('match-intro')?.classList.remove('d-none');
+                backToIntro();
+                return;
+            }
+            if (!data || !data.length) {
+                showToast('No movies matched that genre + era combo. Try loosening the filters.', 'error');
+                backToIntro();
                 return;
             }
             matchDeck = data;
+            matchDeckLoading = false;
             renderMatchStack();
         })
         .catch(() => {
             showToast('Network error loading the match deck.', 'error');
-            gameSection?.classList.add('d-none');
-            document.getElementById('match-intro')?.classList.remove('d-none');
+            backToIntro();
         });
+}
+
+function buildMatchDeckUrl() {
+    const params = new URLSearchParams();
+    if (matchSelectedGenres.length > 0) {
+        params.set('genres', matchSelectedGenres.join(','));
+    }
+    if (matchSelectedEra && matchSelectedEra !== 'any') {
+        params.set('era', matchSelectedEra);
+    }
+    const query = params.toString();
+    return `api/get_match_deck.php${query ? '?' + query : ''}`;
+}
+
+function initMatchPreferenceChips() {
+    const genreChips = document.querySelectorAll('#match-genre-chips .match-chip');
+    genreChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            const genreId = chip.dataset.genre;
+            chip.classList.toggle('active');
+            if (chip.classList.contains('active')) {
+                if (!matchSelectedGenres.includes(genreId)) matchSelectedGenres.push(genreId);
+            } else {
+                matchSelectedGenres = matchSelectedGenres.filter(g => g !== genreId);
+            }
+        });
+    });
+
+    const eraChips = document.querySelectorAll('#match-era-chips .match-chip-era');
+    eraChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            eraChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            matchSelectedEra = chip.dataset.era;
+        });
+    });
 }
 
 function initMovieMatch() {
@@ -408,6 +516,7 @@ function initMovieMatch() {
         const topCard = document.querySelector('#match-card-stack .match-card:last-child');
         if (topCard) commitMatchSwipe(false, topCard);
     });
+    initMatchPreferenceChips();
 }
 
 /* ============================================================================
@@ -1029,7 +1138,16 @@ document.addEventListener('DOMContentLoaded', () => {
     initWatchlistFilterTabs();
     initTimelineSearch();
     initScrollReveal('.timeline-node');
+    initScrollReveal('.timeline-fade-in');
+    initScrollReveal('#match-how-it-works .col');
+    initCinematicBackground();
     initMovieMatch();
+
+    // Letter-by-letter title reveal for any page's hero headline — not
+    // just the homepage's. initHeroMotion() above already handles the
+    // homepage case; this covers everything else (splitLettersForReveal
+    // is a no-op if it's already been run on a given element).
+    document.querySelectorAll('.hero-headline').forEach(el => splitLettersForReveal(el));
 });
 
 /* ============================================================================
