@@ -839,6 +839,63 @@ textarea.form-control::placeholder {
     box-shadow: 0 0 0 1px var(--accent-bright-dim);
 }
 
+/* ---------- Mood Compass: taste radar chart ---------- */
+.taste-radar-wrapper {
+    max-width: 460px;
+    filter: drop-shadow(0 0 30px rgba(201, 150, 46, 0.12));
+}
+.taste-radar-svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+.taste-radar-grid-ring {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 1;
+}
+.taste-radar-axis {
+    stroke: var(--border);
+    stroke-width: 1;
+}
+.taste-radar-shape {
+    fill: rgba(201, 150, 46, 0.28);
+    stroke: var(--accent-bright);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    animation: radarGrow 1s cubic-bezier(0.19, 1, 0.22, 1) both;
+    transform-origin: 220px 220px;
+}
+@keyframes radarGrow {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+}
+.taste-radar-label {
+    fill: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.taste-legend-bar-track {
+    height: 6px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.taste-legend-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-bright));
+    border-radius: 4px;
+    transition: width 1s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .taste-radar-shape { animation: none; }
+    .taste-legend-bar-fill { transition: none; }
+}
+
 /* ---------- Cinematic rotating background ---------- */
 /* Sits behind all page content, dimmed and blurred so text stays fully
    readable — the point is atmosphere, not a competing visual. */

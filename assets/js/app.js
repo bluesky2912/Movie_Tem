@@ -502,6 +502,37 @@ function initMatchPreferenceChips() {
     });
 }
 
+/* ============================================================================
+   Mood Compass (taste.php) — count-up stat numbers and bar fills, both
+   triggered the moment the page loads (these stats sit above the fold, so
+   there's no need to gate this behind scroll visibility).
+============================================================================ */
+function initTasteAnimations() {
+    const countEls = document.querySelectorAll('.taste-count-up');
+    const barEls = document.querySelectorAll('.taste-legend-bar-fill[data-bar-target]');
+    if (countEls.length === 0 && barEls.length === 0) return; // not on this page
+
+    setTimeout(() => {
+        countEls.forEach(el => {
+            const target = parseInt(el.dataset.countTarget, 10) || 0;
+            const duration = 900;
+            const start = performance.now();
+            function tick(now) {
+                const progress = Math.min((now - start) / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(eased * target);
+                if (progress < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+        });
+
+        barEls.forEach(el => {
+            const target = el.dataset.barTarget || 0;
+            el.style.width = `${target}%`;
+        });
+    }, 350);
+}
+
 function initMovieMatch() {
     const startBtn = document.getElementById('match-start-btn');
     if (!startBtn) return; // not on this page
@@ -1141,6 +1172,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initScrollReveal('.timeline-fade-in');
     initScrollReveal('#match-how-it-works .col');
     initCinematicBackground();
+    initTasteAnimations();
     initMovieMatch();
 
     // Letter-by-letter title reveal for any page's hero headline — not

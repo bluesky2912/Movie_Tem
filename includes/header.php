@@ -57,6 +57,9 @@ if (empty($_SESSION['csrf_token'])) {
                 <li class="nav-item">
                     <a class="nav-link text-white-50" href="match.php">Movie Match</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white-50" href="taste.php">My Taste</a>
+                </li>
             </ul>
 
             <div class="d-flex align-items-center gap-3">
