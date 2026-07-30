@@ -510,7 +510,8 @@ function initMatchPreferenceChips() {
 function initTasteAnimations() {
     const countEls = document.querySelectorAll('.taste-count-up');
     const barEls = document.querySelectorAll('.taste-legend-bar-fill[data-bar-target]');
-    if (countEls.length === 0 && barEls.length === 0) return; // not on this page
+    const radarWrapper = document.getElementById('taste-radar-wrapper');
+    if (countEls.length === 0 && barEls.length === 0 && !radarWrapper) return; // not on this page
 
     setTimeout(() => {
         countEls.forEach(el => {
@@ -529,8 +530,23 @@ function initTasteAnimations() {
         barEls.forEach(el => {
             const target = el.dataset.barTarget || 0;
             el.style.width = `${target}%`;
+            // Add the shimmer-sweep class only after the width transition
+            // finishes, so the light sweep reads as "it just settled into
+            // place" rather than racing the fill itself.
+            setTimeout(() => el.classList.add('taste-bar-filled'), 1050);
         });
     }, 350);
+
+    // Once the radar shape has fully grown in (its CSS animation runs for
+    // 1s, starting after the same 350ms setTimeout above), celebrate with a
+    // confetti burst centered on the chart — a reward for landing on the
+    // page, not something the user has to do anything to earn.
+    if (radarWrapper) {
+        setTimeout(() => {
+            const rect = radarWrapper.getBoundingClientRect();
+            fireConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2, 30);
+        }, 350 + 1000);
+    }
 }
 
 function initMovieMatch() {
@@ -800,13 +816,13 @@ function applyTilt(el, e) {
 }
 
 document.addEventListener('mousemove', (e) => {
-    const tiltEl = e.target.closest('.mood-card, .movie-card-interactive');
+    const tiltEl = e.target.closest('.mood-card, .movie-card-interactive, .taste-stat-card');
     if (tiltEl) applyTilt(tiltEl, e);
 });
 
 // mouseleave doesn't bubble, so listen in the capture phase on the document
 document.addEventListener('mouseleave', (e) => {
-    const tiltEl = e.target.closest && e.target.closest('.mood-card, .movie-card-interactive');
+    const tiltEl = e.target.closest && e.target.closest('.mood-card, .movie-card-interactive, .taste-stat-card');
     if (tiltEl) tiltEl.style.transform = '';
 }, true);
 
@@ -1164,6 +1180,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initScrollReveal('.mood-card');
     initScrollReveal('#how-it-works-section .col');
     initScrollReveal('#mood-selector-anchor, #how-it-works-section .text-center.mb-5');
+    // Covers server-rendered grids like watchlist.php — dynamically
+    // injected grids (search/mood/for-you results) already register
+    // themselves individually right after their own fetch() completes.
+    initScrollReveal('#watchlist-grid .movie-card-interactive');
 
     initHeroMotion();
     initWatchlistFilterTabs();

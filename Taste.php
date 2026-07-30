@@ -103,6 +103,7 @@ $gridRings = [];
 $axisLines = [];
 $labelPoints = [];
 $legendItems = [];
+$vertexDots = [];
 
 if ($hasEnoughData) {
     $centerX = 220;
@@ -139,6 +140,15 @@ if ($hasEnoughData) {
             'percent' => round($normalized * 100),
             'avg'     => $genreAverages[$gid],
             'count'   => $genreCounts[$gid],
+        ];
+
+        $vertexDots[] = [
+            'x'       => $x,
+            'y'       => $y,
+            'name'    => $GENRE_NAMES[$gid],
+            'avg'     => $genreAverages[$gid],
+            'count'   => $genreCounts[$gid],
+            'delay'   => $i * 80,
         ];
 
         $i++;
@@ -181,7 +191,7 @@ include 'includes/header.php';
     <?php else: ?>
 
         <div class="text-center mb-5 reveal-on-scroll timeline-fade-in" style="transition-delay: 0.3s;">
-            <span class="badge bg-warning text-dark font-monospace px-4 py-2 fs-6 fw-bold rounded-pill"><?php echo htmlspecialchars($tagline); ?></span>
+            <span class="taste-tagline-badge badge bg-warning text-dark font-monospace px-4 py-2 fs-6 fw-bold rounded-pill"><?php echo htmlspecialchars($tagline); ?></span>
             <?php if ($toughestGenreName): ?>
                 <p class="small mt-3 mb-0" style="color: var(--text-faint);">...but you're toughest on <strong style="color: var(--text-muted);"><?php echo htmlspecialchars($toughestGenreName); ?></strong> (avg ★<?php echo $toughestGenreAvg; ?>)</p>
             <?php endif; ?>
@@ -189,25 +199,25 @@ include 'includes/header.php';
 
         <div class="row g-4 mb-5 justify-content-center reveal-on-scroll timeline-fade-in" style="transition-delay: 0.4s;">
             <div class="col-6 col-md-3">
-                <div class="bg-surface p-3 rounded-4 border border-secondary border-opacity-10 text-center h-100">
+                <div class="taste-stat-card bg-surface p-3 rounded-4 border border-secondary border-opacity-10 text-center h-100">
                     <div class="h3 text-warning mb-0 font-monospace taste-count-up" data-count-target="<?php echo $ratedCount; ?>">0</div>
                     <div class="small text-muted text-uppercase" style="font-size: 0.7rem;">Movies Rated</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="bg-surface p-3 rounded-4 border border-secondary border-opacity-10 text-center h-100">
+                <div class="taste-stat-card bg-surface p-3 rounded-4 border border-secondary border-opacity-10 text-center h-100">
                     <div class="h3 text-warning mb-0 font-monospace">★ <?php echo $avgRating; ?></div>
                     <div class="small text-muted text-uppercase" style="font-size: 0.7rem;">Average Rating</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="bg-surface p-3 rounded-4 border border-secondary border-opacity-10 text-center h-100">
+                <div class="taste-stat-card taste-highlight-card bg-surface p-3 rounded-4 border border-secondary border-opacity-10 text-center h-100">
                     <div class="h3 text-warning mb-0 font-monospace" style="font-size: 1.4rem;"><?php echo htmlspecialchars($topGenreName); ?></div>
                     <div class="small text-muted text-uppercase" style="font-size: 0.7rem;">Top Genre</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="bg-surface p-3 rounded-4 border border-secondary border-opacity-10 text-center h-100">
+                <div class="taste-stat-card bg-surface p-3 rounded-4 border border-secondary border-opacity-10 text-center h-100">
                     <div class="h3 text-warning mb-0 font-monospace taste-count-up" data-count-target="<?php echo count($topGenres); ?>">0</div>
                     <div class="small text-muted text-uppercase" style="font-size: 0.7rem;">Genres Explored</div>
                 </div>
@@ -216,7 +226,7 @@ include 'includes/header.php';
 
         <div class="row g-4 justify-content-center align-items-center reveal-on-scroll timeline-fade-in" style="transition-delay: 0.5s;">
             <div class="col-md-6">
-                <div class="taste-radar-wrapper mx-auto">
+                <div id="taste-radar-wrapper" class="taste-radar-wrapper mx-auto">
                     <svg viewBox="0 0 440 440" class="taste-radar-svg">
                         <?php foreach ($gridRings as $ring): ?>
                             <polygon points="<?php echo $ring; ?>" class="taste-radar-grid-ring" />
@@ -227,6 +237,12 @@ include 'includes/header.php';
                         <?php endforeach; ?>
 
                         <polygon points="<?php echo $polygonPoints; ?>" class="taste-radar-shape" />
+
+                        <?php foreach ($vertexDots as $dot): ?>
+                            <circle cx="<?php echo $dot['x']; ?>" cy="<?php echo $dot['y']; ?>" r="6" class="taste-radar-dot" style="animation-delay: <?php echo 900 + $dot['delay']; ?>ms;">
+                                <title><?php echo htmlspecialchars($dot['name']); ?>: avg ★<?php echo $dot['avg']; ?> across <?php echo $dot['count']; ?> movie<?php echo $dot['count'] === 1 ? '' : 's'; ?></title>
+                            </circle>
+                        <?php endforeach; ?>
 
                         <?php foreach ($labelPoints as $label): ?>
                             <text x="<?php echo $label['x']; ?>" y="<?php echo $label['y']; ?>" text-anchor="<?php echo $label['anchor']; ?>" class="taste-radar-label"><?php echo htmlspecialchars($label['name']); ?></text>

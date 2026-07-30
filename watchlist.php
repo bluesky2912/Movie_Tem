@@ -28,12 +28,16 @@ $savedItems = $stmt->fetchAll();
 include 'includes/header.php';
 ?>
 
-<main class="container my-5" style="min-height: 70vh;">
-    <div class="mb-5">
-        <h1 class="display-5 text-white fw-bold" style="font-family: 'Fraunces', serif; font-style: italic;">
+<div id="cinematic-bg" class="cinematic-bg" aria-hidden="true"></div>
+
+<main class="container my-5" style="min-height: 70vh; position: relative; z-index: 1;">
+    <div class="mb-5 position-relative overflow-hidden">
+        <div class="timeline-hero-glow" style="left: 15%; transform: translate(-50%, -50%);"></div>
+        <div class="projector-beam"></div>
+        <h1 class="hero-headline display-5 text-white fw-bold" style="font-family: 'Fraunces', serif; font-style: italic; position: relative; z-index: 2;">
             Your Curated Collection
         </h1>
-        <p class="text-custom-muted mb-0">
+        <p class="text-custom-muted mb-0 reveal-on-scroll timeline-fade-in" style="position: relative; z-index: 2; transition-delay: 0.5s;">
             Movies you've bookmarked, saved to your profile.
         </p>
     </div>
@@ -46,7 +50,7 @@ include 'includes/header.php';
             <a href="index.php#mood-selector-anchor" class="btn btn-warning-custom btn-sm">Find something good</a>
         </div>
     <?php else: ?>
-        <div class="d-flex gap-2 mb-4" id="watchlist-filter-tabs">
+        <div class="d-flex gap-2 mb-4 reveal-on-scroll timeline-fade-in" id="watchlist-filter-tabs" style="transition-delay: 0.35s;">
             <button type="button" class="watchlist-filter-tab active" data-filter="all">All <span class="filter-count"><?php echo count($savedItems); ?></span></button>
             <button type="button" class="watchlist-filter-tab" data-filter="unwatched">To Watch <span class="filter-count"><?php echo count(array_filter($savedItems, fn($i) => !$i['is_watched'])); ?></span></button>
             <button type="button" class="watchlist-filter-tab" data-filter="watched">Watched <span class="filter-count"><?php echo count(array_filter($savedItems, fn($i) => $i['is_watched'])); ?></span></button>

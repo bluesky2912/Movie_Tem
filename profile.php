@@ -70,11 +70,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 include 'includes/header.php';
 ?>
 
-<main class="container my-5" style="min-height: 75vh;">
+<div id="cinematic-bg" class="cinematic-bg" aria-hidden="true"></div>
+
+<main class="container my-5" style="min-height: 75vh; position: relative; z-index: 1;">
     <div class="row g-4 justify-content-center">
         <div class="col-md-4">
-            <div class="bg-surface p-4 rounded-4 shadow-lg text-center border border-secondary border-opacity-10">
-                <div class="display-4 my-2 text-warning">
+            <div class="bg-surface p-4 rounded-4 shadow-lg text-center border border-secondary border-opacity-10 reveal-on-scroll timeline-fade-in" style="transition-delay: 0.15s;">
+                <div class="display-4 my-2 text-warning taste-icon-pulse">
                     <i class="bi bi-person-badge"></i>
                 </div>
                 <h2 class="h4 text-white mb-1" style="font-family: 'Fraunces', serif; font-style: italic;">
@@ -88,7 +90,7 @@ include 'includes/header.php';
 
                 <div class="row">
                     <div class="col-12 py-2">
-                        <div class="h3 m-0 text-white fw-bold font-monospace"><?php echo (int) $userStats['total_saved']; ?></div>
+                        <div class="h3 m-0 text-white fw-bold font-monospace taste-count-up" data-count-target="<?php echo (int) $userStats['total_saved']; ?>">0</div>
                         <div class="small text-muted text-uppercase tracking-wider" style="font-size: 0.75rem;">Movies Saved</div>
                     </div>
                 </div>
@@ -96,7 +98,7 @@ include 'includes/header.php';
         </div>
 
         <div class="col-md-6">
-            <div class="bg-surface p-4 rounded-4 shadow-lg border border-secondary border-opacity-10">
+            <div class="bg-surface p-4 rounded-4 shadow-lg border border-secondary border-opacity-10 reveal-on-scroll timeline-fade-in" style="transition-delay: 0.3s;">
                 <h3 class="h5 text-white mb-3" style="font-family: 'Fraunces', serif; font-style: italic;">Account Settings</h3>
                 <p class="small text-muted mb-4">Update your email or password below.</p>
 

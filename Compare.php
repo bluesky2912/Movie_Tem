@@ -50,10 +50,14 @@ function sharedCast($movieA, $movieB) {
 include 'includes/header.php';
 ?>
 
-<main class="container my-5" style="min-height: 75vh;">
-    <div class="mb-5 text-center">
-        <span class="text-warning-custom text-uppercase font-monospace small tracking-wider" style="font-size: 0.75rem;">Head to Head</span>
-        <h1 class="display-5 text-white fw-bold" style="font-family: 'Fraunces', serif; font-style: italic;">Compare Movies</h1>
+<div id="cinematic-bg" class="cinematic-bg" aria-hidden="true"></div>
+
+<main class="container my-5" style="min-height: 75vh; position: relative; z-index: 1;">
+    <div class="mb-5 text-center position-relative overflow-hidden">
+        <div class="timeline-hero-glow"></div>
+        <div class="projector-beam"></div>
+        <span class="text-warning-custom text-uppercase font-monospace small tracking-wider" style="font-size: 0.75rem; position: relative; z-index: 2;">Head to Head</span>
+        <h1 class="hero-headline display-5 text-white fw-bold" style="font-family: 'Fraunces', serif; font-style: italic; position: relative; z-index: 2;">Compare Movies</h1>
     </div>
 
     <?php if ($errorMsg): ?>
@@ -77,7 +81,7 @@ include 'includes/header.php';
         $shared = sharedCast($movieA, $movieB);
     ?>
 
-    <div class="row g-4 align-items-center justify-content-center mb-5 reveal-on-scroll is-visible">
+    <div class="row g-4 align-items-center justify-content-center mb-5 reveal-on-scroll timeline-fade-in" style="transition-delay: 0.4s;">
         <div class="col-6 col-md-4 text-center">
             <img src="<?php echo $posterA; ?>" class="img-fluid rounded-4 shadow-lg mb-3 border border-secondary border-opacity-10" style="max-height: 380px;" alt="<?php echo htmlspecialchars($movieA['title'] ?? ''); ?>">
             <h4 class="text-white fw-bold" style="font-family: 'Fraunces', serif; font-style: italic;"><?php echo htmlspecialchars($movieA['title'] ?? 'Unknown'); ?></h4>
@@ -91,7 +95,7 @@ include 'includes/header.php';
         </div>
     </div>
 
-    <div class="bg-surface rounded-4 border border-secondary border-opacity-10 p-4 p-md-5 mx-auto" style="max-width: 720px;">
+    <div class="bg-surface rounded-4 border border-secondary border-opacity-10 p-4 p-md-5 mx-auto reveal-on-scroll timeline-fade-in" style="max-width: 720px; transition-delay: 0.55s;">
         <?php foreach ($rows as $row): ?>
             <div class="d-flex align-items-center py-3 border-bottom border-secondary border-opacity-10">
                 <div class="flex-fill text-end pe-3 <?php echo $row['cmp'] > 0 ? 'text-warning fw-bold' : 'text-white-50'; ?>"><?php echo htmlspecialchars($row['a']); ?></div>

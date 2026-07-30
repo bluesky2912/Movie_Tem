@@ -52,10 +52,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 include 'includes/header.php';
 ?>
 
-<main class="container my-5" style="max-width: 450px; min-height: 75vh;">
-    <div class="bg-surface p-4 p-md-5 rounded-4 shadow-lg border border-secondary border-opacity-10 mt-5">
-        <div class="text-center mb-4">
-            <h2 class="h3 text-white fw-bold" style="font-family: 'Fraunces', serif; font-style: italic;">Welcome Back</h2>
+<div id="cinematic-bg" class="cinematic-bg" aria-hidden="true"></div>
+
+<main class="container my-5" style="max-width: 450px; min-height: 75vh; position: relative; z-index: 1;">
+    <div class="bg-surface p-4 p-md-5 rounded-4 shadow-lg border border-secondary border-opacity-10 mt-5 position-relative overflow-hidden hero-iris-reveal">
+        <div class="timeline-hero-glow"></div>
+        <div class="text-center mb-4" style="position: relative; z-index: 2;">
+            <h2 class="hero-headline h3 text-white fw-bold" style="font-family: 'Fraunces', serif; font-style: italic;">Welcome Back</h2>
             <p class="small text-muted">Sign in to sync your personalized streaming shelves.</p>
         </div>
 
