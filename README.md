@@ -1,8 +1,16 @@
-# 🎬 MovieTem
+<div align="center">
+
+# 🎬 MOVIE TEM
 
 **Cinema, sorted by feeling.**
 
-MovieTem is a mood-based movie discovery platform. Instead of scrolling through endless grids of titles, pick how you feel — happy, mind-bending, chill, nostalgic — and get matched with something worth watching tonight. Rate what you watch, and MovieTem learns your taste to recommend more of it, visualizes that taste back at you, and even helps two people agree on something to watch together.
+*A film print, not a dashboard.*
+
+</div>
+
+Most movie sites hand you a wall of tiles and wish you luck. MovieTem asks how you're actually feeling tonight — happy, mind-bending, chill, nostalgic, or thirteen other moods — and hands back something worth pressing play on. Rate what you watch and it learns your taste, plots that taste back at you as a shape, and can even settle the eternal argument of *what do we watch together* without anyone storming off to bed.
+
+No frameworks. No build step. Just PHP, vanilla JS, and a lot of attention paid to how a real cinema *feels* — grain, sprocket holes, ticket-stub buttons, marquee brass — instead of another Bootstrap template with a dark mode toggle.
 
   <img src="screenshots/homepage.png" alt="Movietem  Homepage" width="800">
   <img src="screenshots/trendingtoday.png" alt="Movietem  trendingtoday" width="800">
@@ -15,53 +23,55 @@ MovieTem is a mood-based movie discovery platform. Instead of scrolling through 
   <img src="screenshots/watchlist.png" alt="Movietem watchlist " width="800">
   <img src="screenshots/how to use.png" alt="Movietem  how to use" width="800">
 
-## ✨ Features
+---
+
+## 🎟️ Now Showing
 
 ### Discovery
-- **Mood-based discovery** — thirteen curated moods (Happy, Horror Night, Sci-Fi, Nostalgic, Hidden Gems, and more) each mapped to a genre profile or a dedicated discovery query, pulling live results from TMDB.
-- **Hidden Gems** — a mood unlike the others: instead of genre-matching, it surfaces highly-rated films (7.5+) that stayed under 20,000 votes, so it skips anything mainstream and turns up movies TMDB's own trending lists never would.
-- **Personalized recommendations ("Picked for You")** — MovieTem analyzes a user's highest-rated movies, computes a weighted genre affinity score, and surfaces titles matching their actual taste — excluding anything already rated or watchlisted. Genre data is cached at rating time so recommendations load fast without hammering the TMDB API.
-- **Live search with autocomplete** — debounced, real-time title suggestions as you type.
-- **Trending carousel** — auto-refreshing showcase of what's popular today, with a slow Ken Burns zoom on the active slide.
+- **Mood-based discovery** — thirteen curated moods (Happy, Horror Night, Sci-Fi, Nostalgic, Hidden Gems, and more), each its own genre profile or dedicated query pulling live results from TMDB. Pick a feeling, not a filter.
+- **Hidden Gems** — the one mood that doesn't play by the popularity rules. It hunts for films rated 7.5+ that stayed under 20,000 votes — the good stuff the algorithm usually buries.
+- **Picked for You** — the recommendation engine, and the closest thing MovieTem has to a house specialty. It weighs your highest-rated movies by genre, skips anything you've already seen or saved, and gets sharper the more you rate.
+- **Live search with autocomplete** — type a title, get real suggestions, debounced so it doesn't hammer TMDB on every keystroke.
+- **Trending carousel** — what's playing today, with a slow Ken Burns zoom so even a static backdrop feels like it's breathing.
 
-### Personal collection
-- **Watchlist** — one-click bookmarking, persisted per user, with poster/rating/year data stored locally so the watchlist page never needs to re-query TMDB.
-- **Mark as Watched** — a second toggle on every watchlist card separates "want to watch" from "already seen," with filter tabs (All / To Watch / Watched) and live counts.
-- **Star ratings & reviews** — rate any movie 1–5 stars with an optional written review; reopening a movie shows your existing rating pre-filled.
-- **Movie detail modal** — synopsis, runtime, trailer link, and regional streaming availability. Provider badges (Netflix, Prime Video, Hotstar, etc.) are clickable and route to that *specific provider's own* search page for the title — not a generic aggregator link.
+### Your Collection
+- **Watchlist** — one click to bookmark, no re-fetching TMDB every time you check it.
+- **Mark as Watched** — a second toggle that splits "want to watch" from "already seen," with filter tabs and live counts so your shelf actually stays organized.
+- **Star ratings & reviews** — 1 to 5 stars, an optional review, pre-filled the next time you open something you've already rated.
+- **The movie modal** — synopsis, runtime, trailer, and streaming availability. Click a provider badge (Netflix, Prime, Hotstar, whatever's showing) and it sends you to *that provider's own* search page for the title — not a generic aggregator link pretending to be helpful.
 
-### Comparing & exploring
-- **Compare Movies** — pick any two movies from a floating selection tray and see them head-to-head: rating, vote count, popularity, runtime, budget, revenue, and any shared cast between them.
-- **Movie Timeline** — search any franchise (or pick from curated quick-starts like Harry Potter, Star Wars, or Jurassic Park) and see every film in it laid out as a visual, connected timeline in release order, pulling from TMDB's own curated Collections data.
+### Compare & Explore
+- **Compare Movies** — pick two off any grid, get them head-to-head: rating, vote count, popularity, runtime, budget, revenue, and any cast they share.
+- **Movie Timeline** — search a franchise, watch it lay itself out as a connected timeline from first film to latest. Real TMDB Collections data, not a guess.
 
-### Together / social
-- **Movie Match** — a two-person swipe game for settling "what do we watch tonight." Both players swipe the same shuffled deck (optionally filtered by genre and era), pass the device between turns, and MovieTem reveals every movie you both liked — with a confetti celebration if there's a match.
+### Together
+- **Movie Match** — the feature that actually earns the tagline. Two players, one device, a shared shuffled deck. Swipe, pass it over, swipe again — whatever you both hearted gets revealed, confetti included. Optional genre and era filters mean it's not just popularity roulette.
 
-### Your taste, visualized
-- **Mood Compass** — a personal radar chart built entirely from your own rating history: your top genres plotted as a shape, exact per-genre averages, a rating-habits breakdown (how many 1★s vs 5★s you actually give), and an honest "you're toughest on [genre]" callout alongside your dominant-genre "verdict" tag.
+### Your Taste, On Screen
+- **Mood Compass** — your rating history turned into a radar chart. Top genres plotted as a shape, exact per-genre averages, a full 1★–5★ breakdown of your rating habits, and an honest "you're toughest on ___" callout that doesn't flatter you.
 
-### Authentication & account
-- Registration, login, and account settings, with hashed passwords and CSRF-protected forms throughout.
-
----
-
-## 🎨 Design & Motion
-
-MovieTem's visual identity is a film print, not a dashboard — grain, sprocket holes, ticket-stub buttons, and marquee brass, built from actual cinema materials rather than a generic UI kit. On top of that sits a full motion system:
-
-- **Cinematic rotating background** — real TMDB top-rated backdrops crossfade behind several pages, blurred and dimmed so content stays fully readable.
-- **Letter-by-letter title reveals**, ambient glows, and a one-time projector-beam sweep on page load.
-- **Scroll reveal** ("focus pull") — content fades in from a blurred, out-of-frame state as it enters the viewport, alternating a subtle tilt so items don't march in uniformly.
-- **3D cursor-tilt** on mood cards, movie cards, and stat cards.
-- **The signature moment**: the movie detail modal opens like a projector iris rather than a generic fade.
-- **Toasts, confetti, and sparkle bursts** replace jarring `alert()` calls and mark genuine wins (added to watchlist, 5-star rating, Movie Match success).
-- A hidden easter egg on the logo (click it five times).
-
-All animation respects `prefers-reduced-motion` throughout.
+### The Basics, Done Right
+- Registration, login, account settings — hashed passwords, CSRF tokens on every form that changes something.
 
 ---
 
-## 🛠️ Tech Stack
+## 🎥 The Look & The Motion
+
+MovieTem's whole visual language comes from an actual cinema, not a UI kit: film grain, sprocket-hole edges, a ticket-stub notch on every primary button, marquee gold reserved for hover and emphasis. Then there's the motion layered on top of it:
+
+- **A rotating backdrop** of real top-rated posters, blurred and dimmed, crossfading behind several pages
+- **Titles that type themselves in**, letter by letter, like an opening credit
+- **Scroll reveal** — content sharpens into focus as it enters view, like a lens racking focus, alternating a slight tilt so nothing marches in uniformly
+- **Cursor-tilt on cards** — mood cards, movie cards, stat cards all lean toward your mouse
+- **The signature moment**: the movie modal doesn't fade in, it opens like a projector iris
+- **Toasts, confetti, sparkle bursts** — every genuine win (a save, a 5-star rating, a Movie Match) gets a small reward instead of a browser `alert()`
+- A hidden easter egg on the logo, for anyone patient enough to click it five times
+
+Everything above respects `prefers-reduced-motion`. Atmosphere is the goal, not seasickness.
+
+---
+
+## 🎞️ Behind the Scenes (Tech Stack)
 
 | Layer | Technology |
 |---|---|
@@ -71,33 +81,33 @@ All animation respects `prefers-reduced-motion` throughout.
 | External API | [The Movie Database (TMDB)](https://www.themoviedb.org/) |
 | Fonts | Fraunces, Inter, JetBrains Mono (Google Fonts) |
 
-No frameworks, no build step — clone it and run it on any standard PHP/MySQL stack (XAMPP, MAMP, or a LAMP server).
+No frameworks, no build step — clone it, point a standard PHP/MySQL stack at it (XAMPP, MAMP, or a LAMP server), and it runs.
 
-## 🧠 How the Recommendation Engine Works
+## 🎬 Director's Commentary: How the Recommendation Engine Works
 
-1. When a user rates a movie, MovieTem fetches that movie's genres from TMDB once and stores them alongside the rating.
-2. To generate recommendations, it pulls the user's 4★+ rated movies and computes a weighted genre score (a 5★ rating counts more than a 4★ one).
-3. It queries TMDB separately for each of the user's top 3 genres, then interleaves the results round-robin — so one dominant genre doesn't flood every recommendation slot.
-4. Anything the user has already rated or watchlisted is filtered out before display.
+1. Rate a movie, and MovieTem quietly fetches its genres from TMDB once and caches them alongside the rating.
+2. To build recommendations, it pulls your 4★+ rated movies and computes a weighted genre score — a 5★ counts for more than a 4★.
+3. It queries TMDB separately for your top 3 genres and interleaves the results round-robin, so one obsession doesn't flood every slot.
+4. Anything already rated or watchlisted gets filtered out before it ever reaches the screen.
 
-This means recommendations get more accurate the more a user rates, and never repeat data they've already engaged with.
+The more you rate, the sharper it gets. It never shows you the same thing twice.
 
-## 🧭 How Mood Compass Works
+## 🧭 Director's Commentary: How Mood Compass Works
 
-1. Pulls every rating the user has made, along with the genre IDs cached at rating time (the same data the recommendation engine uses).
-2. Computes a weighted score per genre (sum of ratings for movies in that genre) and a genuine per-genre average (score ÷ number of movies in that genre).
-3. The top 7 genres by weighted score become the axes of a hand-built SVG radar chart — no charting library, just server-side trigonometry.
-4. A "toughest on" callout surfaces the genre with the user's lowest average rating (minimum 2 movies rated in it, so one harsh review can't unfairly brand a whole genre), and a rating-habits bar shows the full 1★–5★ distribution.
+1. Pulls every rating you've made, along with the genre data cached at rating time — same data the recommendation engine already leans on.
+2. Computes a weighted score per genre, and a genuine average per genre (score ÷ number of movies rated in it).
+3. Your top 7 genres become the axes of a hand-built SVG radar chart — no charting library, just server-side trigonometry doing the drawing.
+4. A "toughest on" callout names the genre with your lowest average (minimum 2 ratings in it, so one harsh review can't unfairly brand a whole genre), and a rating-habits bar shows exactly how generous — or not — you actually are.
 
-Needs at least 3 rated movies with cached genre data before it renders; otherwise it shows an honest empty state.
+Needs at least 3 rated movies with cached genre data to render. Fewer than that, and it says so honestly instead of faking a chart.
 
-## 🤝 How Movie Match Works
+## 🤝 Director's Commentary: How Movie Match Works
 
-1. Optionally, both players agree on genre tags and/or an era before starting — this builds a filtered TMDB `discover` query instead of a generic popular-movies pool.
-2. A shuffled 16-movie deck is fetched once and shared between both players.
-3. Player 1 swipes (drag or tap ✕/❤); their likes are tracked in memory only.
-4. A "pass the device" screen hands off to Player 2, who swipes the identical deck without seeing Player 1's picks.
-5. Any movie both players liked is revealed as a match. Zero overlap gets an honest "wildly different taste" message with a one-tap reshuffle.
+1. Both players can agree on genre tags and/or an era before starting — this builds a filtered TMDB `discover` query instead of a generic popularity pool.
+2. A shuffled 16-movie deck gets fetched once and shared between both players.
+3. Player 1 swipes — drag the card or tap ✕ / ❤ — likes tracked in memory only.
+4. A "pass the device" screen hands off to Player 2, who swipes the identical deck blind, with no idea what Player 1 picked.
+5. Anything you both liked gets revealed as a match, confetti and all. Zero overlap gets an honest "wildly different taste" message and a one-tap reshuffle — no fake matches, ever.
 
 ## 📁 Project Structure
 
@@ -139,7 +149,7 @@ movietem/
 └── schema.sql                    # full database schema
 ```
 
-## 🚀 Setup
+## 🎫 Setup (Buying Your Ticket)
 
 **Requirements:** PHP 7.4+, MySQL/MariaDB, a [free TMDB API key](https://www.themoviedb.org/settings/api).
 
@@ -168,26 +178,26 @@ movietem/
 
 4. **Serve the app** — point your local server (XAMPP/MAMP/`php -S`) at the project root and visit `index.php`.
 
-5. **Register an account**, rate a few movies 4★ or higher, and watch the "Picked for You" section populate on the homepage — then check out **My Taste** in the nav once you've rated a handful more.
+5. **Register an account**, rate a few movies 4★ or higher, and watch "Picked for You" populate on the homepage — then check **My Taste** in the nav once you've rated a handful more.
 
-## 🔒 Security & Reliability Notes
+## 🔒 Security & Reliability
 
-- All database queries use PDO prepared statements — no raw string interpolation.
-- Every state-changing endpoint validates a per-session CSRF token before acting.
-- Passwords are hashed with `password_hash()` / verified with `password_verify()` — never stored in plaintext.
+- Every database query runs through PDO prepared statements — no raw string interpolation, anywhere.
+- Every state-changing endpoint checks a per-session CSRF token before it acts.
+- Passwords are hashed with `password_hash()`, verified with `password_verify()` — never stored in plaintext.
 - Real credentials (`config/database.php`, `config/tmdb.php`) are gitignored; only placeholder `.example.php` templates are committed.
-- TMDB requests automatically retry (up to 3 attempts with backoff) on transient network failures, and force TLS 1.2/IPv4/HTTP1.1 to work around a common connection-reset issue on older PHP/cURL/OpenSSL combinations.
-- API endpoints surface the real underlying error (TMDB error message or cURL failure reason) instead of silently returning an empty result, so a genuine outage doesn't look identical to "nothing found."
+- TMDB requests automatically retry (up to 3 attempts, with backoff) on transient network failures, and force TLS 1.2 / IPv4 / HTTP1.1 to work around a common connection-reset issue on older PHP/cURL/OpenSSL combinations.
+- API endpoints surface the *real* underlying error — the actual TMDB message or cURL failure reason — instead of silently returning an empty result. A genuine outage should never look identical to "nothing found."
 
-## 🗺️ Possible Next Steps
+## 🎟️ Coming Attractions
 
 - Password reset flow
-- TMDB response caching (reduce live calls, further insulate against connectivity hiccups)
+- TMDB response caching (fewer live calls, more insulation against connectivity hiccups)
 - Pagination / infinite scroll on mood and search results (currently capped at TMDB's first page)
 - Genre/rating filter chips on the main Mood Finder and search results (Movie Match already has this)
 - Public shareable watchlist links
-- Public review feed (see what everyone's saying about a movie, not just your own rating)
-- Content-rating filters on discovery/recommendation results
+- Public review feed — see what everyone's saying about a movie, not just your own rating
+- Content-rating filters on discovery and recommendation results
 
 ## 🙏 Attribution
 
@@ -195,5 +205,6 @@ This product uses the TMDB API but is not endorsed or certified by TMDB.
 
 <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB Logo" width="150">
 
+---
 
-This project was built as a college project and is available for educational reference.
+*Built as a college project. House lights up, credits roll — available for educational reference.*
