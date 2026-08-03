@@ -507,6 +507,278 @@ function initMatchPreferenceChips() {
    triggered the moment the page loads (these stats sit above the fold, so
    there's no need to gate this behind scroll visibility).
 ============================================================================ */
+/* ============================================================================
+   Custom magnetic cursor — mouse-only devices get a two-part cursor (a
+   lerped outer ring, an instant inner dot) that expands over anything
+   interactive. Gated behind (pointer: fine) so touch/tablet users never
+   lose their native cursor, and the CSS itself only hides the native
+   cursor once this JS confirms it actually attached successfully.
+============================================================================ */
+function initCustomCursor() {
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+
+    document.body.classList.add('has-custom-cursor');
+
+    const ring = document.createElement('div');
+    ring.className = 'custom-cursor-ring';
+    const dot = document.createElement('div');
+    dot.className = 'custom-cursor-dot';
+    document.body.appendChild(ring);
+    document.body.appendChild(dot);
+
+    let mouseX = window.innerWidth / 2;
+    let mouseY = window.innerHeight / 2;
+    let ringX = mouseX;
+    let ringY = mouseY;
+
+    document.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        dot.style.transform = `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`;
+    });
+
+    function animateRing() {
+        ringX += (mouseX - ringX) * 0.18;
+        ringY += (mouseY - ringY) * 0.18;
+        ring.style.transform = `translate(${ringX}px, ${ringY}px) translate(-50%, -50%)`;
+        requestAnimationFrame(animateRing);
+    }
+    animateRing();
+
+    const interactiveSelector = 'a, button, input, textarea, .mood-card, .movie-card-interactive, .timeline-node, .compare-btn-toggle, .watchlist-btn-toggle, .watched-btn-toggle';
+    document.addEventListener('mouseover', (e) => {
+        if (e.target.closest(interactiveSelector)) ring.classList.add('is-hovering');
+    });
+    document.addEventListener('mouseout', (e) => {
+        if (e.target.closest(interactiveSelector)) ring.classList.remove('is-hovering');
+    });
+
+    document.addEventListener('mouseleave', () => {
+        ring.style.opacity = '0';
+        dot.style.opacity = '0';
+    });
+    document.addEventListener('mouseenter', () => {
+        ring.style.opacity = '1';
+        dot.style.opacity = '1';
+    });
+
+    // Movie Match's drag cards get their native grab/grabbing cursor back —
+    // a dot cursor would fight with the drag gesture instead of aiding it.
+    const matchStack = document.getElementById('match-card-stack');
+    if (matchStack) {
+        matchStack.addEventListener('mouseenter', () => {
+            ring.style.opacity = '0';
+            dot.style.opacity = '0';
+        });
+        matchStack.addEventListener('mouseleave', () => {
+            ring.style.opacity = '1';
+            dot.style.opacity = '1';
+        });
+    }
+}
+
+/* ============================================================================
+   Magnetic buttons — primary CTAs pull gently toward the cursor while it's
+   nearby, snapping back on mouseleave. Mouse-only, same as the cursor above.
+============================================================================ */
+function initMagneticButtons() {
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+
+    document.querySelectorAll('.btn-warning-custom, .match-swipe-btn').forEach(btn => {
+        btn.addEventListener('mousemove', (e) => {
+            const rect = btn.getBoundingClientRect();
+            const relX = e.clientX - rect.left - rect.width / 2;
+            const relY = e.clientY - rect.top - rect.height / 2;
+            btn.style.transform = `translate(${relX * 0.25}px, ${relY * 0.25}px)`;
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.transform = '';
+        });
+    });
+}
+
+/* ============================================================================
+   Nav link text-scramble on hover — characters cycle randomly before
+   settling back on the real label.
+============================================================================ */
+const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+function scrambleText(el) {
+    if (el.dataset.scrambling === 'true') return;
+    const originalText = el.dataset.originalText || el.textContent;
+    el.dataset.originalText = originalText;
+    el.dataset.scrambling = 'true';
+
+    let iteration = 0;
+    const totalIterations = originalText.length * 3;
+
+    const interval = setInterval(() => {
+        el.textContent = originalText.split('').map((char, index) => {
+            if (char === ' ') return ' ';
+            if (index < iteration / 3) return originalText[index];
+            return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+        }).join('');
+
+        iteration++;
+        if (iteration > totalIterations) {
+            clearInterval(interval);
+            el.textContent = originalText;
+            el.dataset.scrambling = 'false';
+        }
+    }, 30);
+}
+
+function initNavScramble() {
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('mouseenter', () => scrambleText(link));
+    });
+}
+
+/* ============================================================================
+   WebGL hero showcase (index.php only) — three concentric gold rings,
+   each spinning on a different axis at a different speed, drifting behind
+   a soft particle field of "grain in space," reacting to mouse position
+   for a depth-parallax feel. Genuinely different from the CSS-only motion
+   elsewhere on the site — this is real 3D, not a simulation of it.
+   Requires three.js (loaded via CDN, homepage only) and a fine pointer;
+   degrades to the section's own CSS gradient/glow background otherwise.
+============================================================================ */
+function initHeroWebGL() {
+    const canvas = document.getElementById('hero-3d-canvas');
+    if (!canvas || typeof THREE === 'undefined') return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let scene, camera, renderer, ringGroup, particles;
+    const rings = [];
+    let mouseX = 0;
+    let mouseY = 0;
+    let spinBoost = 0; // decaying multiplier, kicked up by clicking the reel
+
+    function getSize() {
+        return { w: canvas.clientWidth || canvas.parentElement.clientWidth, h: canvas.clientHeight || 380 };
+    }
+
+    function setup() {
+        const { w, h } = getSize();
+
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+        camera.position.z = 8;
+
+        renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(w, h, false);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+        const key = new THREE.PointLight(0xC9962E, 2, 20);
+        key.position.set(5, 3, 5);
+        scene.add(key);
+        const fill = new THREE.PointLight(0xF2EBDA, 1, 20);
+        fill.position.set(-5, -3, 3);
+        scene.add(fill);
+
+        const goldMaterial = new THREE.MeshStandardMaterial({
+            color: 0xC9962E, metalness: 0.7, roughness: 0.3,
+            emissive: 0x2a1c08, emissiveIntensity: 0.3
+        });
+
+        ringGroup = new THREE.Group();
+        [
+            { radius: 2.4, tube: 0.05, speed: 0.004, axis: 'y' },
+            { radius: 1.8, tube: 0.06, speed: -0.006, axis: 'x' },
+            { radius: 1.2, tube: 0.07, speed: 0.008, axis: 'y' },
+        ].forEach(cfg => {
+            const geo = new THREE.TorusGeometry(cfg.radius, cfg.tube, 16, 100);
+            const mesh = new THREE.Mesh(geo, goldMaterial);
+            mesh.rotation.x = Math.random() * Math.PI;
+            mesh.rotation.y = Math.random() * Math.PI;
+            ringGroup.add(mesh);
+            rings.push({ mesh, cfg });
+        });
+        scene.add(ringGroup);
+
+        const particleCount = 180;
+        const positions = new Float32Array(particleCount * 3);
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] = (Math.random() - 0.5) * 12;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 12;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 12;
+        }
+        const particleGeo = new THREE.BufferGeometry();
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const particleMat = new THREE.PointsMaterial({ color: 0xF2EBDA, size: 0.03, transparent: true, opacity: 0.5 });
+        particles = new THREE.Points(particleGeo, particleMat);
+        scene.add(particles);
+    }
+
+    function onPointerMove(e) {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+        mouseY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+    }
+    canvas.addEventListener('mousemove', onPointerMove);
+
+    // Click the reel to spin it — a genuinely different mechanic from
+    // "Surprise Me" (which filters the whole page to a mood grid): this
+    // pairs up TWO movies as a "Double Feature" and reveals them right
+    // inside the showcase itself, with a one-click add-both-to-watchlist.
+    const showcaseEl = canvas.closest('.webgl-showcase');
+    canvas.style.cursor = 'pointer';
+
+    function spinReel(e) {
+        spinBoost = 6;
+        showcaseEl?.classList.add('reel-spinning');
+
+        const rect = canvas.getBoundingClientRect();
+        const originX = e ? rect.left + (e.clientX - rect.left) : rect.left + rect.width / 2;
+        const originY = e ? rect.top + (e.clientY - rect.top) : rect.top + rect.height / 2;
+        fireConfetti(originX, originY, 24);
+        showToast('🎞️ Pairing tonight\'s double feature...', 'info', '🎬');
+
+        fetch('api/get_match_deck.php')
+            .then(res => res.json())
+            .then(data => {
+                if (!data || data.error || data.length < 2) throw new Error('not enough movies');
+                const shuffled = data.slice().sort(() => Math.random() - 0.5);
+                const [movieA, movieB] = shuffled;
+
+                setTimeout(() => {
+                    showcaseEl?.classList.remove('reel-spinning');
+                    renderDoubleFeature(movieA, movieB, spinReel);
+                }, 1100);
+            })
+            .catch(() => {
+                showcaseEl?.classList.remove('reel-spinning');
+                showToast("Couldn't pair a double feature. Try again.", 'error');
+            });
+    }
+
+    canvas.addEventListener('click', spinReel);
+
+    function animate() {
+        rings.forEach(r => { r.mesh.rotation[r.cfg.axis] += r.cfg.speed * (1 + spinBoost); });
+        particles.rotation.y += 0.0006 * (1 + spinBoost * 0.5);
+        spinBoost *= 0.94; // settles back to ambient speed over ~1s
+
+        ringGroup.rotation.y += (mouseX * 0.3 - ringGroup.rotation.y) * 0.05;
+        ringGroup.rotation.x += (mouseY * 0.2 - ringGroup.rotation.x) * 0.05;
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+    }
+
+    function onResize() {
+        const { w, h } = getSize();
+        if (!w || !h) return;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h, false);
+    }
+    window.addEventListener('resize', onResize);
+
+    setup();
+    animate();
+}
+
 function initTasteAnimations() {
     const countEls = document.querySelectorAll('.taste-count-up');
     const barEls = document.querySelectorAll('.taste-legend-bar-fill[data-bar-target]');
@@ -917,6 +1189,70 @@ function fireConfetti(originX = window.innerWidth / 2, originY = window.innerHei
 }
 
 /* ============================================================================
+   Double Feature reveal — renders two paired movies inside the WebGL
+   showcase itself (no navigation, no modal-jumping). Each poster still
+   opens the normal detail modal via the existing [data-open-modal]
+   delegate, since these are real elements in the DOM, not synthetic ones.
+============================================================================ */
+function renderDoubleFeature(movieA, movieB, spinAgainFn) {
+    const reveal = document.getElementById('double-feature-reveal');
+    if (!reveal) return;
+
+    const posterUrl = (movie) => movie.poster_path
+        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+        : 'https://via.placeholder.com/500x750/1a1510/fff?text=No+Poster';
+
+    const posterCard = (movie) => `
+        <div class="double-feature-poster" data-open-modal="${movie.id}" title="View details">
+            <img src="${posterUrl(movie)}" alt="${escapeHtml(movie.title || 'Untitled')}">
+            <div class="double-feature-poster-title">${escapeHtml(movie.title || 'Untitled')}</div>
+            <div class="double-feature-poster-meta">★ ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</div>
+        </div>`;
+
+    reveal.innerHTML = `
+        <span class="text-warning-custom text-uppercase font-monospace small tracking-wider mb-3">Tonight's Double Feature</span>
+        <div class="double-feature-posters">
+            ${posterCard(movieA)}
+            <span class="double-feature-plus">+</span>
+            ${posterCard(movieB)}
+        </div>
+        <div class="d-flex gap-2 mt-3">
+            <button type="button" id="double-feature-watchlist-btn" class="btn btn-warning-custom btn-sm px-4">🍿 Add Both to Watchlist</button>
+            <button type="button" id="double-feature-again-btn" class="btn btn-outline-light btn-sm px-3 rounded-pill">🔁 Spin Again</button>
+        </div>`;
+
+    reveal.classList.remove('d-none');
+    requestAnimationFrame(() => reveal.classList.add('is-visible'));
+
+    document.getElementById('double-feature-watchlist-btn')?.addEventListener('click', () => {
+        if (!isLoggedIn) {
+            showToast('Sign in to save movies to your watchlist.', 'error');
+            return;
+        }
+        [movieA, movieB].forEach(movie => {
+            const formData = new FormData();
+            formData.append('movie_id', movie.id);
+            formData.append('csrf_token', csrfToken);
+            formData.append('title', movie.title || '');
+            formData.append('poster_path', movie.poster_path || '');
+            formData.append('vote_average', movie.vote_average || '');
+            formData.append('release_date', movie.release_date || '');
+            fetch('api/toggle_watchlist.php', { method: 'POST', body: formData }).catch(() => {});
+        });
+        fireConfetti(window.innerWidth / 2, window.innerHeight / 2, 20);
+        showToast('Both added to your watchlist!', 'info', '🍿');
+    });
+
+    document.getElementById('double-feature-again-btn')?.addEventListener('click', () => {
+        reveal.classList.remove('is-visible');
+        setTimeout(() => {
+            reveal.classList.add('d-none');
+            if (typeof spinAgainFn === 'function') spinAgainFn();
+        }, 300);
+    });
+}
+
+/* ============================================================================
    Slot-machine spin for "Surprise Me"
 ============================================================================ */
 function slotMachineReveal(moodCardsArr, onDone) {
@@ -1193,6 +1529,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initScrollReveal('#match-how-it-works .col');
     initCinematicBackground();
     initTasteAnimations();
+    initCustomCursor();
+    initMagneticButtons();
+    initNavScramble();
+    initHeroWebGL();
     initMovieMatch();
 
     // Letter-by-letter title reveal for any page's hero headline — not

@@ -94,6 +94,17 @@ include 'includes/header.php';
 
     </div>
 
+    <div class="webgl-showcase mb-5 rounded-4 overflow-hidden position-relative border border-secondary border-opacity-10">
+        <div class="webgl-showcase-glow"></div>
+        <canvas id="hero-3d-canvas"></canvas>
+        <div class="webgl-showcase-caption position-absolute">
+            <span class="text-warning-custom text-uppercase font-monospace small tracking-wider" style="font-size: 0.75rem;">The Reel</span>
+            <h3 class="text-white fw-bold mb-1" style="font-family: 'Fraunces', serif; font-style: italic;">Every story, in motion.</h3>
+            <span class="webgl-showcase-hint font-monospace text-uppercase small">🎬 Click for a Double Feature</span>
+        </div>
+        <div id="double-feature-reveal" class="double-feature-reveal d-none"></div>
+    </div>
+
     <?php if (!empty($trendingMovies)): ?>
     <div id="heroTrendingCarousel" class="carousel slide carousel-fade mb-5 shadow-lg border border-secondary border-opacity-10 overflow-hidden" data-bs-ride="carousel" style="border-radius: 16px;">
         <div class="carousel-inner">
@@ -272,5 +283,11 @@ include 'includes/header.php';
 <script>
     window.MOVIETEM_IS_LOGGED_IN = <?php echo isset($_SESSION['user_id']) ? 'true' : 'false'; ?>;
 </script>
+
+<!-- three.js — loaded only on the homepage, only for the WebGL showcase.
+     Must appear before footer.php's own scripts so app.js can see THREE
+     by the time its DOMContentLoaded handler runs. r128 pinned
+     intentionally, matching what's already vetted for this project. -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 
 <?php include 'includes/footer.php'; ?>

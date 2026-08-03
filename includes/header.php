@@ -96,3 +96,10 @@ if (empty($_SESSION['csrf_token'])) {
         </div>
     </div>
 </nav>
+
+<div class="marquee-ticker" aria-hidden="true">
+    <div class="marquee-ticker-track">
+        <span>🎬 NOW SHOWING — HAPPY · HORROR NIGHT · SCI-FI · HIDDEN GEMS · ROMANTIC · NOSTALGIC · MIND-BENDING · CHILL VIBE &nbsp;&nbsp;&nbsp;</span>
+        <span>🎬 NOW SHOWING — HAPPY · HORROR NIGHT · SCI-FI · HIDDEN GEMS · ROMANTIC · NOSTALGIC · MIND-BENDING · CHILL VIBE &nbsp;&nbsp;&nbsp;</span>
+    </div>
+</div>

@@ -918,6 +918,238 @@ textarea.form-control::placeholder {
     .taste-icon-pulse { animation: none; }
 }
 
+/* ===========================================================================
+   SITE-WIDE INTERACTION LAYER — marquee ticker, custom magnetic cursor,
+   magnetic buttons. These run everywhere (added via header.php / global JS
+   init), not scoped to one page.
+=========================================================================== */
+
+/* ---------- Marquee ticker: a literal cinema marquee, always scrolling ---------- */
+.marquee-ticker {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    white-space: nowrap;
+}
+.marquee-ticker-track {
+    display: inline-flex;
+    width: max-content;
+    animation: marqueeTickerScroll 24s linear infinite;
+}
+.marquee-ticker-track span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-bright);
+    padding: 6px 0;
+}
+@keyframes marqueeTickerScroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .marquee-ticker-track { animation: none; }
+}
+
+/* ---------- Custom magnetic cursor (mouse-only — mobile/tablet untouched) ---------- */
+.custom-cursor-ring {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 34px;
+    height: 34px;
+    border: 1.5px solid var(--accent-bright);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 99999;
+    transform: translate(-50%, -50%);
+    transition: width 0.25s ease, height 0.25s ease, background-color 0.25s ease,
+                border-color 0.25s ease, opacity 0.2s ease;
+    mix-blend-mode: difference;
+    will-change: transform;
+}
+.custom-cursor-dot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 6px;
+    background: var(--accent-bright);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 99999;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.2s ease;
+    will-change: transform;
+}
+.custom-cursor-ring.is-hovering {
+    width: 56px;
+    height: 56px;
+    background: rgba(201, 150, 46, 0.18);
+    border-color: transparent;
+}
+
+/* Hide the native cursor only once JS confirms a fine-pointer device and
+   successfully attaches the custom one — never done via a blind media
+   query, so a JS failure can't leave the page with no visible cursor. */
+body.has-custom-cursor,
+body.has-custom-cursor a,
+body.has-custom-cursor button,
+body.has-custom-cursor input,
+body.has-custom-cursor textarea,
+body.has-custom-cursor .mood-card,
+body.has-custom-cursor .movie-card-interactive,
+body.has-custom-cursor .timeline-node {
+    cursor: none;
+}
+/* Movie Match's drag cards keep their native grab affordance — a custom
+   dot cursor would fight with the drag gesture rather than support it. */
+body.has-custom-cursor .match-card { cursor: grab; }
+body.has-custom-cursor .match-card.dragging { cursor: grabbing; }
+
+@media (max-width: 991px), (pointer: coarse) {
+    .custom-cursor-ring, .custom-cursor-dot { display: none !important; }
+    body.has-custom-cursor, body.has-custom-cursor * { cursor: auto !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .custom-cursor-ring, .custom-cursor-dot { display: none !important; }
+    body.has-custom-cursor, body.has-custom-cursor * { cursor: auto !important; }
+}
+
+/* ---------- Magnetic buttons: pull toward the cursor within range ---------- */
+/* No new rules needed — .btn-warning-custom already transitions transform
+   in its base rule, so the JS-driven pull animates smoothly for free. */
+
+/* ---------- WebGL hero showcase (index.php) ---------- */
+.webgl-showcase {
+    height: 380px;
+    background: linear-gradient(135deg, #150f0a 0%, #0d0905 100%);
+    cursor: pointer;
+    transition: box-shadow 0.3s ease;
+}
+.webgl-showcase:hover {
+    box-shadow: 0 0 0 1px var(--accent-bright-dim), 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+.webgl-showcase.reel-spinning {
+    box-shadow: 0 0 0 1px var(--accent-bright), 0 0 60px rgba(201, 150, 46, 0.35);
+}
+.webgl-showcase.reel-spinning .webgl-showcase-hint {
+    animation: none;
+    opacity: 1;
+}
+#hero-3d-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+.webgl-showcase-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 480px;
+    height: 480px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(201, 150, 46, 0.12) 0%, rgba(0, 0, 0, 0) 70%);
+    filter: blur(30px);
+    pointer-events: none;
+    z-index: 0;
+}
+.webgl-showcase-caption {
+    left: 32px;
+    bottom: 28px;
+    z-index: 2;
+    pointer-events: none;
+}
+.webgl-showcase-hint {
+    display: inline-block;
+    color: var(--text-faint);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    animation: webglHintPulse 2.4s ease-in-out infinite;
+}
+@keyframes webglHintPulse {
+    0%, 100% { opacity: 0.5; }
+    50%      { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .webgl-showcase-hint { animation: none; }
+}
+
+/* ---------- Double Feature reveal — pops over the WebGL canvas ---------- */
+.double-feature-reveal {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(8, 5, 3, 0.94);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    transform: scale(0.94);
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.double-feature-reveal.is-visible {
+    opacity: 1;
+    transform: scale(1);
+}
+.double-feature-posters {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+.double-feature-poster {
+    width: 110px;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.2s ease;
+}
+.double-feature-poster:hover {
+    transform: translateY(-4px);
+}
+.double-feature-poster img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+.double-feature-poster-title {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    margin-top: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.double-feature-poster-meta {
+    font-size: 0.7rem;
+    color: var(--accent-bright);
+    font-family: 'JetBrains Mono', monospace;
+}
+.double-feature-plus {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 1.6rem;
+    color: var(--accent-bright);
+}
+
+@media (max-width: 576px) {
+    .double-feature-poster { width: 80px; }
+    .double-feature-poster img { height: 116px; }
+}
+
+@media (max-width: 767px) {
+    .webgl-showcase { height: 260px; }
+}
+
 /* Tagline badge: a warm marquee-bulb glow pulse, like the site's buttons */
 .taste-tagline-badge {
     animation: tasteTagBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both,
