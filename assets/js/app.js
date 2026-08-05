@@ -732,23 +732,19 @@ function initHeroWebGL() {
         const originX = e ? rect.left + (e.clientX - rect.left) : rect.left + rect.width / 2;
         const originY = e ? rect.top + (e.clientY - rect.top) : rect.top + rect.height / 2;
         fireConfetti(originX, originY, 24);
-        showToast('🎞️ Pairing tonight\'s double feature...', 'info', '🎬');
+        showToast('🏆 Pulling up your Hall of Fame...', 'info', '🎬');
 
-        fetch('api/get_match_deck.php')
+        fetch('api/get_favorites_showcase.php')
             .then(res => res.json())
             .then(data => {
-                if (!data || data.error || data.length < 2) throw new Error('not enough movies');
-                const shuffled = data.slice().sort(() => Math.random() - 0.5);
-                const [movieA, movieB] = shuffled;
-
                 setTimeout(() => {
                     showcaseEl?.classList.remove('reel-spinning');
-                    renderDoubleFeature(movieA, movieB, spinReel);
+                    renderHallOfFame(data.status, data.movies || [], spinReel);
                 }, 1100);
             })
             .catch(() => {
                 showcaseEl?.classList.remove('reel-spinning');
-                showToast("Couldn't pair a double feature. Try again.", 'error');
+                showToast("Couldn't load your Hall of Fame. Try again.", 'error');
             });
     }
 
@@ -1189,68 +1185,67 @@ function fireConfetti(originX = window.innerWidth / 2, originY = window.innerHei
 }
 
 /* ============================================================================
-   Double Feature reveal — renders two paired movies inside the WebGL
-   showcase itself (no navigation, no modal-jumping). Each poster still
-   opens the normal detail modal via the existing [data-open-modal]
-   delegate, since these are real elements in the DOM, not synthetic ones.
+   Hall of Fame reveal — renders inside the WebGL showcase itself: the
+   user's own movies that are BOTH rated 4+ stars AND marked watched
+   (a real join between movie_ratings and watchlist, not TMDB data). Each
+   poster opens the normal detail modal via the existing [data-open-modal]
+   delegate, since these are real DOM elements, not synthetic ones.
 ============================================================================ */
-function renderDoubleFeature(movieA, movieB, spinAgainFn) {
+function renderHallOfFame(status, movies, spinAgainFn) {
     const reveal = document.getElementById('double-feature-reveal');
     if (!reveal) return;
 
-    const posterUrl = (movie) => movie.poster_path
-        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-        : 'https://via.placeholder.com/500x750/1a1510/fff?text=No+Poster';
+    if (status === 'guest') {
+        reveal.innerHTML = `
+            <div class="fs-1 mb-2">🔒</div>
+            <h5 class="text-white fw-semibold mb-2">Your Hall of Fame is waiting</h5>
+            <p class="small text-custom-muted mb-3 text-center" style="max-width: 320px;">Sign in, rate a few movies 4★ or higher, and mark them watched — this is where they'll show up.</p>
+            <a href="login.php" class="btn btn-warning-custom btn-sm px-4">Sign In</a>
+        `;
+    } else if (status === 'empty') {
+        reveal.innerHTML = `
+            <div class="fs-1 mb-2">🏆</div>
+            <h5 class="text-white fw-semibold mb-2">No inductees yet</h5>
+            <p class="small text-custom-muted mb-3 text-center" style="max-width: 340px;">Rate something 4★ or higher and mark it as watched on your <a href="watchlist.php" class="text-warning text-decoration-underline">watchlist</a> — it'll land here.</p>
+            <button type="button" id="double-feature-again-btn" class="btn btn-outline-light btn-sm px-3 rounded-pill">🔁 Check Again</button>
+        `;
+    } else {
+        const posterUrl = (movie) => movie.poster_path
+            ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+            : 'https://via.placeholder.com/500x750/1a1510/fff?text=No+Poster';
 
-    const posterCard = (movie) => `
-        <div class="double-feature-poster" data-open-modal="${movie.id}" title="View details">
-            <img src="${posterUrl(movie)}" alt="${escapeHtml(movie.title || 'Untitled')}">
-            <div class="double-feature-poster-title">${escapeHtml(movie.title || 'Untitled')}</div>
-            <div class="double-feature-poster-meta">★ ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</div>
-        </div>`;
+        const posterItem = (movie, i) => `
+            <div class="hall-of-fame-poster" data-open-modal="${movie.tmdb_movie_id}" title="View details" style="animation-delay: ${i * 70}ms;">
+                <img src="${posterUrl(movie)}" alt="${escapeHtml(movie.title || 'Untitled')}">
+                <div class="hall-of-fame-poster-rating">★ ${movie.rating}</div>
+            </div>`;
 
-    reveal.innerHTML = `
-        <span class="text-warning-custom text-uppercase font-monospace small tracking-wider mb-3">Tonight's Double Feature</span>
-        <div class="double-feature-posters">
-            ${posterCard(movieA)}
-            <span class="double-feature-plus">+</span>
-            ${posterCard(movieB)}
-        </div>
-        <div class="d-flex gap-2 mt-3">
-            <button type="button" id="double-feature-watchlist-btn" class="btn btn-warning-custom btn-sm px-4">🍿 Add Both to Watchlist</button>
-            <button type="button" id="double-feature-again-btn" class="btn btn-outline-light btn-sm px-3 rounded-pill">🔁 Spin Again</button>
-        </div>`;
+        reveal.innerHTML = `
+            <span class="text-warning-custom text-uppercase font-monospace small tracking-wider mb-1">🏆 Your Hall of Fame</span>
+            <p class="small text-custom-muted mb-3">${movies.length} movie${movies.length === 1 ? '' : 's'} you rated 4★+ and watched</p>
+            <div class="hall-of-fame-strip">
+                ${movies.map(posterItem).join('')}
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <a href="watchlist.php" class="btn btn-warning-custom btn-sm px-4">View Watchlist</a>
+                <button type="button" id="double-feature-again-btn" class="btn btn-outline-light btn-sm px-3 rounded-pill">🔁 Close</button>
+            </div>
+        `;
+    }
 
     reveal.classList.remove('d-none');
     requestAnimationFrame(() => reveal.classList.add('is-visible'));
-
-    document.getElementById('double-feature-watchlist-btn')?.addEventListener('click', () => {
-        if (!isLoggedIn) {
-            showToast('Sign in to save movies to your watchlist.', 'error');
-            return;
-        }
-        [movieA, movieB].forEach(movie => {
-            const formData = new FormData();
-            formData.append('movie_id', movie.id);
-            formData.append('csrf_token', csrfToken);
-            formData.append('title', movie.title || '');
-            formData.append('poster_path', movie.poster_path || '');
-            formData.append('vote_average', movie.vote_average || '');
-            formData.append('release_date', movie.release_date || '');
-            fetch('api/toggle_watchlist.php', { method: 'POST', body: formData }).catch(() => {});
-        });
-        fireConfetti(window.innerWidth / 2, window.innerHeight / 2, 20);
-        showToast('Both added to your watchlist!', 'info', '🍿');
-    });
 
     document.getElementById('double-feature-again-btn')?.addEventListener('click', () => {
         reveal.classList.remove('is-visible');
         setTimeout(() => {
             reveal.classList.add('d-none');
-            if (typeof spinAgainFn === 'function') spinAgainFn();
+            if (status === 'empty' && typeof spinAgainFn === 'function') spinAgainFn();
         }, 300);
     });
 }
+
+
 
 /* ============================================================================
    Slot-machine spin for "Surprise Me"
