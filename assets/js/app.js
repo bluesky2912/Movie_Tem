@@ -647,11 +647,12 @@ function initHeroWebGL() {
     if (!canvas || typeof THREE === 'undefined') return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    let scene, camera, renderer, ringGroup, particles;
+    let scene, camera, renderer, ringGroup, particles, clock;
     const rings = [];
+    const posterMeshes = [];
     let mouseX = 0;
     let mouseY = 0;
-    let spinBoost = 0; // decaying multiplier, kicked up by clicking the reel
+    let cachedFavorites = null; // { status, movies } — fetched once, reused by the fallback panel link
 
     function getSize() {
         return { w: canvas.clientWidth || canvas.parentElement.clientWidth, h: canvas.clientHeight || 380 };
@@ -663,6 +664,7 @@ function initHeroWebGL() {
         scene = new THREE.Scene();
         camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
         camera.position.z = 8;
+        clock = new THREE.Clock();
 
         renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -710,50 +712,113 @@ function initHeroWebGL() {
         scene.add(particles);
     }
 
-    function onPointerMove(e) {
-        const rect = canvas.getBoundingClientRect();
-        mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-        mouseY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+    /* -------- Orbiting posters: the user's own 4★+ watched movies -------- */
+    function buildOrbitingPosters(movies) {
+        const loader = new THREE.TextureLoader();
+        loader.crossOrigin = 'anonymous';
+        const aspect = 185 / 278; // TMDB poster aspect ratio
+        const posterHeight = 0.85;
+        const posterWidth = posterHeight * aspect;
+
+        movies.forEach((movie, i) => {
+            if (!movie.poster_path) return;
+
+            const texture = loader.load(`https://image.tmdb.org/t/p/w185${movie.poster_path}`);
+            const geo = new THREE.PlaneGeometry(posterWidth, posterHeight);
+            const mat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+            const mesh = new THREE.Mesh(geo, mat);
+
+            // A thin gold "frame" sitting just behind each poster
+            const frameGeo = new THREE.PlaneGeometry(posterWidth + 0.06, posterHeight + 0.06);
+            const frameMat = new THREE.MeshBasicMaterial({ color: 0xC9962E });
+            const frame = new THREE.Mesh(frameGeo, frameMat);
+            frame.position.z = -0.01;
+            mesh.add(frame);
+
+            mesh.userData.movieId = movie.tmdb_movie_id;
+            mesh.userData.baseAngle = (i / movies.length) * Math.PI * 2;
+            mesh.userData.orbitRadius = 3.1 + (i % 2) * 0.35;
+            mesh.userData.orbitTilt = (i % 3 - 1) * 0.15; // slight vertical stagger between orbits
+            mesh.userData.bobPhase = Math.random() * Math.PI * 2;
+            mesh.userData.bobSpeed = 0.4 + Math.random() * 0.25;
+
+            scene.add(mesh);
+            posterMeshes.push(mesh);
+        });
     }
-    canvas.addEventListener('mousemove', onPointerMove);
 
-    // Click the reel to spin it — a genuinely different mechanic from
-    // "Surprise Me" (which filters the whole page to a mood grid): this
-    // pairs up TWO movies as a "Double Feature" and reveals them right
-    // inside the showcase itself, with a one-click add-both-to-watchlist.
-    const showcaseEl = canvas.closest('.webgl-showcase');
-    canvas.style.cursor = 'pointer';
-
-    function spinReel(e) {
-        spinBoost = 6;
-        showcaseEl?.classList.add('reel-spinning');
-
-        const rect = canvas.getBoundingClientRect();
-        const originX = e ? rect.left + (e.clientX - rect.left) : rect.left + rect.width / 2;
-        const originY = e ? rect.top + (e.clientY - rect.top) : rect.top + rect.height / 2;
-        fireConfetti(originX, originY, 24);
-        showToast('🏆 Pulling up your Hall of Fame...', 'info', '🎬');
-
+    function loadFavorites() {
         fetch('api/get_favorites_showcase.php')
             .then(res => res.json())
             .then(data => {
-                setTimeout(() => {
-                    showcaseEl?.classList.remove('reel-spinning');
-                    renderHallOfFame(data.status, data.movies || [], spinReel);
-                }, 1100);
+                cachedFavorites = data;
+                if (data.status === 'success' && data.movies?.length) {
+                    buildOrbitingPosters(data.movies.slice(0, 8));
+                }
             })
-            .catch(() => {
-                showcaseEl?.classList.remove('reel-spinning');
-                showToast("Couldn't load your Hall of Fame. Try again.", 'error');
-            });
+            .catch(() => { cachedFavorites = { status: 'error', movies: [] }; });
     }
 
-    canvas.addEventListener('click', spinReel);
+    /* -------- Interaction: hover + click raycasting against the posters -------- */
+    const raycaster = new THREE.Raycaster();
+    const pointerVec = new THREE.Vector2();
+
+    function updatePointer(e) {
+        const rect = canvas.getBoundingClientRect();
+        pointerVec.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointerVec.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+        mouseY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+    }
+
+    function onPointerMove(e) {
+        updatePointer(e);
+        if (posterMeshes.length === 0) return;
+        raycaster.setFromCamera(pointerVec, camera);
+        const hit = raycaster.intersectObjects(posterMeshes, false).length > 0;
+        canvas.style.cursor = hit ? 'pointer' : 'default';
+    }
+    canvas.addEventListener('mousemove', onPointerMove);
+
+    canvas.addEventListener('click', (e) => {
+        updatePointer(e);
+        if (posterMeshes.length === 0) return;
+        raycaster.setFromCamera(pointerVec, camera);
+        const intersects = raycaster.intersectObjects(posterMeshes, false);
+        if (intersects.length > 0) {
+            const movieId = intersects[0].object.userData.movieId;
+            if (movieId) openMovieModalById(movieId);
+        }
+    });
+
+    // A small text link in the caption (added once favorites are known)
+    // acts as the accessible fallback for anyone who can't easily click a
+    // small moving 3D target — same data, shown as the flat panel instead.
+    function wireFallbackLink() {
+        const link = document.getElementById('webgl-view-list-link');
+        if (!link) return;
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (cachedFavorites) {
+                renderHallOfFame(cachedFavorites.status, cachedFavorites.movies || [], loadFavorites);
+            }
+        });
+    }
 
     function animate() {
-        rings.forEach(r => { r.mesh.rotation[r.cfg.axis] += r.cfg.speed * (1 + spinBoost); });
-        particles.rotation.y += 0.0006 * (1 + spinBoost * 0.5);
-        spinBoost *= 0.94; // settles back to ambient speed over ~1s
+        const t = clock.getElapsedTime();
+        const orbitSpeed = 0.15; // slow, deliberate — not a spinning wheel
+
+        rings.forEach(r => { r.mesh.rotation[r.cfg.axis] += r.cfg.speed; });
+        particles.rotation.y += 0.0006;
+
+        posterMeshes.forEach(mesh => {
+            const angle = mesh.userData.baseAngle + t * orbitSpeed;
+            mesh.position.x = Math.cos(angle) * mesh.userData.orbitRadius;
+            mesh.position.z = Math.sin(angle) * mesh.userData.orbitRadius;
+            mesh.position.y = mesh.userData.orbitTilt + Math.sin(t * mesh.userData.bobSpeed + mesh.userData.bobPhase) * 0.25;
+            mesh.lookAt(camera.position);
+        });
 
         ringGroup.rotation.y += (mouseX * 0.3 - ringGroup.rotation.y) * 0.05;
         ringGroup.rotation.x += (mouseY * 0.2 - ringGroup.rotation.x) * 0.05;
@@ -772,6 +837,8 @@ function initHeroWebGL() {
     window.addEventListener('resize', onResize);
 
     setup();
+    loadFavorites();
+    wireFallbackLink();
     animate();
 }
 
@@ -1182,6 +1249,24 @@ function fireConfetti(originX = window.innerWidth / 2, originY = window.innerHei
         document.body.appendChild(piece);
         setTimeout(() => piece.remove(), 1600);
     }
+}
+
+/* ============================================================================
+   Open the movie details modal for a given ID programmatically — reuses
+   the existing global [data-open-modal] click delegate exactly as-is by
+   dispatching a real click on a throwaway trigger, rather than duplicating
+   the whole fetch/render/error-handling block that lives in that delegate.
+   Needed here because the WebGL orbiting posters aren't real DOM elements
+   the delegate can see directly — a raycaster click resolves to a movie
+   ID, and this is the bridge back into the normal 2D UI.
+============================================================================ */
+function openMovieModalById(movieId) {
+    const trigger = document.createElement('button');
+    trigger.setAttribute('data-open-modal', movieId);
+    trigger.style.display = 'none';
+    document.body.appendChild(trigger);
+    trigger.click();
+    setTimeout(() => trigger.remove(), 500);
 }
 
 /* ============================================================================

@@ -1061,6 +1061,10 @@ body.has-custom-cursor .match-card.dragging { cursor: grabbing; }
     bottom: 28px;
     z-index: 2;
     pointer-events: none;
+    max-width: 400px;
+}
+.webgl-showcase-caption #webgl-view-list-link {
+    pointer-events: auto;
 }
 .webgl-showcase-hint {
     display: inline-block;

@@ -99,8 +99,8 @@ include 'includes/header.php';
         <canvas id="hero-3d-canvas"></canvas>
         <div class="webgl-showcase-caption position-absolute">
             <span class="text-warning-custom text-uppercase font-monospace small tracking-wider" style="font-size: 0.75rem;">The Reel</span>
-            <h3 class="text-white fw-bold mb-1" style="font-family: 'Fraunces', serif; font-style: italic;">Every story, in motion.</h3>
-            <span class="webgl-showcase-hint font-monospace text-uppercase small">🏆 Click for your Hall of Fame</span>
+            <h3 class="text-white fw-bold mb-1" style="font-family: 'Fraunces', serif; font-style: italic;">Your favorites, in orbit.</h3>
+            <span class="webgl-showcase-hint font-monospace text-uppercase small">Movies you rated 4★+ and watched float here — click one, or <a href="#" id="webgl-view-list-link" class="text-warning text-decoration-underline">view as a list</a></span>
         </div>
         <div id="double-feature-reveal" class="double-feature-reveal d-none"></div>
     </div>
